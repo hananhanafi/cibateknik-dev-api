@@ -6,6 +6,7 @@ const firebase = require('firebase');
 firebase.initializeApp(config);
 
 const { validateLoginData, validateSignUpData } = require('../util/validators');
+const { request } = require('http');
 
 // Login
 exports.loginUser = (request, response) => {
@@ -20,7 +21,13 @@ exports.loginUser = (request, response) => {
     firebase
         .auth()
         .signInWithEmailAndPassword(user.email, user.password)
-        .then((data) => {
+        .then(async(data) => {
+            
+            const isVerified = await firebase.auth().currentUser.emailVerified;
+
+            if(!isVerified){
+                return response.status(403).json({ message: 'Please verify your account'});
+            }
             return data.user.getIdToken();
         })
         .then((token) => {
@@ -28,7 +35,7 @@ exports.loginUser = (request, response) => {
         })
         .catch((error) => {
             console.error(error);
-            return response.status(403).json({ general: 'wrong credentials, please try again'});
+            return response.status(403).json({ error:error,message: 'wrong credentials, please try again'});
         })
 };
 
@@ -38,7 +45,7 @@ exports.signUpUser = (request, response) => {
         lastName: request.body.lastName,
         email: request.body.email,
         phoneNumber: request.body.phoneNumber,
-        country: request.body.country,
+        address: request.body.address,
 		password: request.body.password,
 		confirmPassword: request.body.confirmPassword,
 		username: request.body.username
@@ -75,17 +82,27 @@ exports.signUpUser = (request, response) => {
                 lastName: newUser.lastName,
                 username: newUser.username,
                 phoneNumber: newUser.phoneNumber,
-                country: newUser.country,
+                address: newUser.address,
                 email: newUser.email,
                 createdAt: new Date().toISOString(),
                 userId
             };
-            return db
-                    .doc(`/users/${newUser.username}`)
-                    .set(userCredentials);
+            // return db
+            //         .doc(`/users/${newUser.username}`)
+            //         .set(userCredentials);
+            db
+            .doc(`/users/${newUser.username}`)
+            .set(userCredentials);
+
+            return firebase.auth().currentUser;
         })
-        .then(()=>{
-            return response.status(201).json({ token });
+        .then((user)=>{
+            user.sendEmailVerification().then(function() {
+                return response.status(201).json({ token });
+            // Email sent.
+            }).catch(function(error) {
+				return response.status(500).json({ error: error });
+            });
         })
         .catch((err) => {
 			console.error(err);
@@ -162,6 +179,9 @@ exports.uploadProfilePhoto = (request, response) => {
 
 exports.getUserDetail = (request, response) => {
     let userData = {};
+
+    // return response.json(firebase.auth().currentUser.emailVerified);
+
 	db
 		.doc(`/users/${request.user.username}`)
 		.get()
@@ -179,6 +199,27 @@ exports.getUserDetail = (request, response) => {
 
 exports.updateUserDetails = (request, response) => {
     let document = db.collection('users').doc(`${request.user.username}`);
+
+    var user = firebase.auth().currentUser;
+
+    if(request.body.email){
+        user.updateEmail(request.body.email).then(function() {
+        // Update successful.
+        }).catch(function(error) {
+        // An error happened.
+        });
+            
+    }
+    if(request.body.passsword){
+        user.updatePassword(request.body.email).then(function() {
+        // Update successful.
+        }).catch(function(error) {
+        // An error happened.
+        });
+            
+    }
+
+    
     document.update(request.body)
     .then(()=> {
         response.json({message: 'Updated successfully'});
@@ -188,5 +229,33 @@ exports.updateUserDetails = (request, response) => {
         return response.status(500).json({ 
             message: "Cannot Update the value"
         });
+    });
+}
+
+
+
+exports.sendVerificationEmail = (request, response) => {
+    var auth = firebase.auth().user;
+    var emailAddress = request.body.email;
+
+    auth.sendEmailVerification(emailAddress).then(function() {
+        // Email sent.
+    return response.status(201).json({ message:"Send email success" });
+    }).catch(function(error) {
+        // An error happened.
+        return response.status(500).json({ error: error.code });
+    });
+}
+
+exports.sendEmailResetPassword = (request, response) => {
+    var auth = firebase.auth();
+    var emailAddress = request.body.email;
+
+    auth.sendPasswordResetEmail(emailAddress).then(function() {
+        // Email sent.
+    return response.status(201).json({ message:"Send email success" });
+    }).catch(function(error) {
+        // An error happened.
+        return response.status(500).json({ error: error.code });
     });
 }

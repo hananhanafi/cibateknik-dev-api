@@ -17,21 +17,31 @@ const auth = require('./util/auth');
 // Automatically allow cross-origin requests
 app.use(cors({ origin: true }));
 
-const {getAllTodos,postOneTodo, deleteTodo, editTodo} = require('./APIs/todos');
-const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails} = require('./APIs/users');
+const {getAllTodos,postOneTodo, deleteTodo, editTodo, getOneTodo} = require('./APIs/todos');
+const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword} = require('./APIs/users');
+const {signUpAdmin, loginAdmin} = require('./APIs/admins');
+const { emailSender } = require('./APIs/email');
+
+
+app.post('/admin/signup', signUpAdmin);
+app.post('/admin/login', loginAdmin);
 
 
 app.get('/todos', auth, getAllTodos);
-// app.get('/todo/:todoId', auth, getOneTodo);
+app.get('/todo/:todoId', auth, getOneTodo);
 app.post('/todo',auth, postOneTodo);
 app.delete('/todo/:todoId',auth, deleteTodo);
 app.put('/todo/:todoId',auth, editTodo);
 
 //user
-app.post('/login', loginUser);
-app.post('/signup', signUpUser);
+app.post('/user/signup', signUpUser);
+app.post('/user/login', loginUser);
+app.post('/user/sendemailverivication', sendVerificationEmail);
+app.post('/user/resetpassword', sendEmailResetPassword);
 app.post('/user/image', auth, uploadProfilePhoto);
 app.get('/user', auth, getUserDetail);
 app.post('/user', auth, updateUserDetails);
+
+app.post('/emailsender',emailSender);
 
 exports.api = functions.https.onRequest(app);
