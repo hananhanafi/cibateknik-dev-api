@@ -57,7 +57,7 @@ exports.loginAdmin = (request, response) => {
         .auth()
         .signInWithEmailAndPassword(user.email, user.password)
         .then(async(data) => {
-            return response.status(403).json({ message: 'Please verify your account'});
+            return data.user.getIdToken();
         })
         .then((token) => {
             return response.json({ token });

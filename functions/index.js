@@ -12,12 +12,14 @@ const functions = require('firebase-functions');
 const app = require('express')();
 const cors = require('cors');
 const auth = require('./util/auth');
+const auth_admin = require('./util/auth_admin');
 
 
 // Automatically allow cross-origin requests
 app.use(cors({ origin: true }));
 
 const {getAllTodos,postOneTodo, deleteTodo, editTodo, getOneTodo} = require('./APIs/todos');
+const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');
 const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword} = require('./APIs/users');
 const {signUpAdmin, loginAdmin} = require('./APIs/admins');
 const { emailSender } = require('./APIs/email');
@@ -26,12 +28,19 @@ const { emailSender } = require('./APIs/email');
 app.post('/admin/signup', signUpAdmin);
 app.post('/admin/login', loginAdmin);
 
+app.get('/admin/products', auth_admin, getAllProducts);
+app.get('/admin/product/:productId', auth_admin, getOneProduct);
+app.post('/admin/product',auth_admin, postOneProduct);
+app.delete('/admin/product/:productId',auth_admin, deleteProduct);
+app.put('/admin/product/:productId',auth_admin, editProduct);
 
-app.get('/todos', auth, getAllTodos);
-app.get('/todo/:todoId', auth, getOneTodo);
-app.post('/todo',auth, postOneTodo);
-app.delete('/todo/:todoId',auth, deleteTodo);
-app.put('/todo/:todoId',auth, editTodo);
+
+app.get('/todos', auth_admin, getAllTodos);
+app.get('/todo/:todoId', auth_admin, getOneTodo);
+app.post('/todo',auth_admin, postOneTodo);
+app.delete('/todo/:todoId',auth_admin, deleteTodo);
+app.put('/todo/:todoId',auth_admin, editTodo);
+
 
 //user
 app.post('/user/signup', signUpUser);
