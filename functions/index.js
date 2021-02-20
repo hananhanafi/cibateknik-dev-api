@@ -28,11 +28,23 @@ const { emailSender } = require('./APIs/email');
 app.post('/admin/signup', signUpAdmin);
 app.post('/admin/login', loginAdmin);
 
+//admin products
 app.get('/admin/products', auth_admin, getAllProducts);
 app.get('/admin/product/:productId', auth_admin, getOneProduct);
 app.post('/admin/product',auth_admin, postOneProduct);
 app.delete('/admin/product/:productId',auth_admin, deleteProduct);
 app.put('/admin/product/:productId',auth_admin, editProduct);
+//end admin products
+
+
+//admin brands
+const { getOneBrand, getAllBrands, postOneBrand, deleteBrand, editBrand } = require('./APIs/brands');
+app.get('/admin/brands', auth_admin, getAllBrands);
+app.get('/admin/brand/:brandId', auth_admin, getOneBrand);
+app.post('/admin/brand',auth_admin, postOneBrand);
+app.delete('/admin/brand/:brandId',auth_admin, deleteBrand);
+app.put('/admin/brand/:brandId',auth_admin, editBrand);
+//end admin brands
 
 
 app.get('/todos', auth_admin, getAllTodos);
