@@ -1,5 +1,5 @@
 const isEmpty = (string) => {
-	if (string == undefined || string.trim() === '') return true;
+	if (string == undefined || string == '') return true;
 	else return false;
 };
 
@@ -42,3 +42,18 @@ exports.validateSignUpData = (data) => {
 		valid: Object.keys(errors).length === 0 ? true : false
 	};
 };
+
+exports.validateEmptyData = (datas) => {
+	let errors = {};
+
+	for (var key in datas) {
+		if(isEmpty(datas[key])){
+			errors[key] = 'Must not be empty';
+		}
+	}
+
+	return {
+		errors,
+		valid: Object.keys(errors).length === 0 ? true : false
+	};
+}

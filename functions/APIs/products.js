@@ -4,7 +4,6 @@ exports.getAllProducts = (request, response) => {
     
 	db
 		.collection('products')
-        .where('username_admin', '==', request.user.username)
 		.orderBy('createdAt', 'desc')
 		.get()
 		.then((data) => {
@@ -79,8 +78,8 @@ exports.getOneProduct = (request, response) => {
 
             
 			if (doc.exists) {
-                todoData = doc.data();
-                return response.json(todoData);
+                productData = doc.data();
+                return response.json(productData);
 			}	
         })
         .catch((err) => {

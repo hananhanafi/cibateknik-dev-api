@@ -29,8 +29,8 @@ app.post('/admin/signup', signUpAdmin);
 app.post('/admin/login', loginAdmin);
 
 //admin products
-app.get('/admin/products', auth_admin, getAllProducts);
-app.get('/admin/product/:productId', auth_admin, getOneProduct);
+app.get('/admin/products', getAllProducts);
+app.get('/admin/product/:productId', getOneProduct);
 app.post('/admin/product',auth_admin, postOneProduct);
 app.delete('/admin/product/:productId',auth_admin, deleteProduct);
 app.put('/admin/product/:productId',auth_admin, editProduct);
@@ -39,12 +39,23 @@ app.put('/admin/product/:productId',auth_admin, editProduct);
 
 //admin brands
 const { getOneBrand, getAllBrands, postOneBrand, deleteBrand, editBrand } = require('./APIs/brands');
-app.get('/admin/brands', auth_admin, getAllBrands);
-app.get('/admin/brand/:brandId', auth_admin, getOneBrand);
+app.get('/admin/brands', getAllBrands);
+app.get('/admin/brand/:brandId', getOneBrand);
 app.post('/admin/brand',auth_admin, postOneBrand);
 app.delete('/admin/brand/:brandId',auth_admin, deleteBrand);
 app.put('/admin/brand/:brandId',auth_admin, editBrand);
 //end admin brands
+
+
+//admin items
+const { postOneItem, getAllItems, getOneItem, deleteItem, editItem } = require('./APIs/items');
+app.get('/admin/items', getAllItems);
+app.get('/admin/item/:itemId', getOneItem);
+app.post('/admin/item',auth_admin, postOneItem);
+app.delete('/admin/item/:itemId',auth_admin, deleteItem);
+app.put('/admin/item/:itemId',auth_admin, editItem);
+//end admin items
+
 
 
 app.get('/todos', auth_admin, getAllTodos);

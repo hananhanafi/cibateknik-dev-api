@@ -4,7 +4,6 @@ exports.getAllBrands = (request, response) => {
     
 	db
 		.collection('brands')
-        .where('username_admin', '==', request.user.username)
 		.orderBy('createdAt', 'desc')
 		.get()
 		.then((data) => {
@@ -79,8 +78,8 @@ exports.getOneBrand = (request, response) => {
 
             
 			if (doc.exists) {
-                todoData = doc.data();
-                return response.json(todoData);
+                brandData = doc.data();
+                return response.json(brandData);
 			}	
         })
         .catch((err) => {
