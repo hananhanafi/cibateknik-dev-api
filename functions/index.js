@@ -19,7 +19,6 @@ const auth_admin = require('./util/auth_admin');
 app.use(cors({ origin: true }));
 
 const {getAllTodos,postOneTodo, deleteTodo, editTodo, getOneTodo} = require('./APIs/todos');
-const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');
 const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword} = require('./APIs/users');
 const {signUpAdmin, loginAdmin} = require('./APIs/admins');
 const { emailSender } = require('./APIs/email');
@@ -29,6 +28,7 @@ app.post('/admin/signup', signUpAdmin);
 app.post('/admin/login', loginAdmin);
 
 //admin products
+const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');
 app.get('/admin/products', getAllProducts);
 app.get('/admin/product/:productId', getOneProduct);
 app.post('/admin/product',auth_admin, postOneProduct);
@@ -36,6 +36,15 @@ app.delete('/admin/product/:productId',auth_admin, deleteProduct);
 app.put('/admin/product/:productId',auth_admin, editProduct);
 //end admin products
 
+
+//admin Suppliers
+const { getOneSupplier, getAllSuppliers, postOneSupplier, deleteSupplier, editSupplier } = require('./APIs/suppliers');
+app.get('/admin/suppliers', getAllSuppliers);
+app.get('/admin/supplier/:supplierId', getOneSupplier);
+app.post('/admin/supplier',auth_admin, postOneSupplier);
+app.delete('/admin/supplier/:supplierId',auth_admin, deleteSupplier);
+app.put('/admin/supplier/:supplierId',auth_admin, editSupplier);
+//end admin Suppliers
 
 //admin brands
 const { getOneBrand, getAllBrands, postOneBrand, deleteBrand, editBrand } = require('./APIs/brands');

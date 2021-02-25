@@ -149,6 +149,7 @@ exports.postOneItem = async (request, response) => {
         const newItem = {
             productId: request.body.productId,
             brandId: request.body.brandId,
+            supplierId: request.body.supplierId,
             name: request.body.name,
             stock: request.body.stock,
             minimumStock: request.body.minimumStock,
@@ -174,6 +175,14 @@ exports.postOneItem = async (request, response) => {
         .then((doc)=>{
             if(!doc.exists){
                 return response.status(404).json({ error: 'Brand not found' })
+            }
+        })
+        
+        await db.doc(`/suppliers/${newItem.supplierId}`)
+        .get()
+        .then((doc)=>{
+            if(!doc.exists){
+                return response.status(404).json({ error: 'Supplier not found' })
             }
         })
 
