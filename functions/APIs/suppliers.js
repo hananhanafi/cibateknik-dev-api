@@ -38,13 +38,21 @@ exports.postOneSupplier = async (request, response) => {
             createdAt: new Date().toISOString()
         }
 
+        const res = request.body.name.toLowerCase().split(" ");
+        const idArr = res.filter(item=>{
+            return item!="";
+        })
+
+        const id = idArr.join("-");
+
         const suppliersRef = db.collection('suppliers');
         const supplier = await suppliersRef.where('name', '==', newSupplier.name).limit(1).get();
 
         if(supplier.empty){
             db
             .collection('suppliers')
-            .add(newSupplier)
+            .doc(id)
+            .set(newSupplier)
             .then((doc)=>{
                 const responseSupplier = newSupplier;
                 responseSupplier.id = doc.id;

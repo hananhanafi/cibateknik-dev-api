@@ -30,7 +30,13 @@ exports.postOneBrand = async (request, response) => {
         if (request.body.name == undefined || request.body.name.trim() === '') {
             return response.status(400).json({ name: 'Must not be empty' });
         }
-        
+        const res = request.body.name.toLowerCase().split(" ");
+        const idArr = res.filter(item=>{
+            return item!="";
+        })
+
+        const id = idArr.join("_");
+
         const newBrandItem = {
             username_admin: request.user.username,
             name: request.body.name,
@@ -43,7 +49,8 @@ exports.postOneBrand = async (request, response) => {
         if(brand.empty){
             db
             .collection('brands')
-            .add(newBrandItem)
+            .doc(id)
+            .set(newBrandItem)
             .then((doc)=>{
                 const responseBrandItem = newBrandItem;
                 responseBrandItem.id = doc.id;

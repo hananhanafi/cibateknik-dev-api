@@ -36,6 +36,13 @@ exports.postOneProduct = async (request, response) => {
             name: request.body.name,
             createdAt: new Date().toISOString()
         }
+        const res = request.body.name.toLowerCase().split(" ");
+        const idArr = res.filter(item=>{
+            return item!="";
+        })
+
+        const id = idArr.join("-");
+        
 
         const productsRef = db.collection('products');
         const product = await productsRef.where('name', '==', newProductItem.name).limit(1).get();
@@ -43,7 +50,8 @@ exports.postOneProduct = async (request, response) => {
         if(product.empty){
             db
             .collection('products')
-            .add(newProductItem)
+            .doc(id)
+            .set(newProductItem)
             .then((doc)=>{
                 const responseProductItem = newProductItem;
                 responseProductItem.id = doc.id;

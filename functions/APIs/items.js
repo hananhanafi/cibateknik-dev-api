@@ -159,8 +159,17 @@ exports.postOneItem = async (request, response) => {
         }
 
         
+        
         const { valid, errors } = validateEmptyData(newItem);
         if (!valid) return response.status(400).json(errors);
+
+        
+        const res = request.body.name.toLowerCase().split(" ");
+        const idArr = res.filter(item=>{
+            return item!="";
+        })
+
+        const id = idArr.join("-");
 
         await db.doc(`/products/${newItem.productId}`)
         .get()
@@ -188,7 +197,8 @@ exports.postOneItem = async (request, response) => {
 
         db
         .collection('items')
-        .add(newItem)
+        .doc(id)
+        .set(newItem)
         .then((doc)=>{
             const responseItem = newItem;
             responseItem.id = doc.id;
