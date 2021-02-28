@@ -145,16 +145,21 @@ exports.postOneItem = async (request, response) => {
 
     try {
         
-        
-        const newItem = {
+        const ids = {
             productId: request.body.productId,
             brandId: request.body.brandId,
             supplierId: request.body.supplierId,
+        }
+        
+        const newItem = {
+            ...ids,
             name: request.body.name,
             stock: request.body.stock,
             minimumStock: request.body.minimumStock,
             price: request.body.price,
-            createdAt: new Date().toISOString(),
+            note: request.body.note,
+            createdAt: new Date(),
+            updatedAt: new Date(),
             descriptions: request.body.descriptions
         }
 
@@ -192,6 +197,14 @@ exports.postOneItem = async (request, response) => {
         .then((doc)=>{
             if(!doc.exists){
                 return response.status(404).json({ error: 'Supplier not found' })
+            }
+        })
+
+        await db.doc(`/items/${id}`)
+        .get()
+        .then((doc)=>{
+            if(doc.exists){
+                return response.status(404).json({ error: 'Item already exists' })
             }
         })
 
@@ -236,11 +249,12 @@ exports.deleteItem = (request, response) => {
 };
 
 exports.editItem = ( request, response ) => { 
-    console.log("bdy",request.body);
     // const obj2 = Object.map(obj1, (k,v) => v + 5);
     // var filtered = Object.filter(scores, score => score > 1); 
-    const updateItem = Object.fromEntries(
-        Object.entries(request.body).filter(([key, value]) => value != null) )
+    let updateItem = Object.fromEntries(
+        Object.entries(request.body).filter(([key, value]) => value != null) );
+    
+    updateItem.updatedAt = new Date();
 
     if (request.body.name == undefined || request.body.name.trim() === '') {
         return response.status(400).json({ name: 'Must not be empty' });

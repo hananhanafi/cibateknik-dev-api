@@ -48,7 +48,9 @@ exports.signUpUser = (request, response) => {
         address: request.body.address,
 		password: request.body.password,
 		confirmPassword: request.body.confirmPassword,
-		username: request.body.username
+		username: request.body.username,
+        createdAt: new Date(),
+        updatedAt: new Date(),
     };
 
     const { valid, errors } = validateSignUpData(newUser);
@@ -198,20 +200,27 @@ exports.getUserDetail = (request, response) => {
 }
 
 exports.updateUserDetails = (request, response) => {
+
+    
+    let updateItem = Object.fromEntries(
+        Object.entries(request.body).filter(([key, value]) => value != null) );
+    
+    updateItem.updatedAt = new Date();
+    
     let document = db.collection('users').doc(`${request.user.username}`);
 
     var user = firebase.auth().currentUser;
 
-    if(request.body.email){
-        user.updateEmail(request.body.email).then(function() {
+    if(updateItem.email){
+        user.updateEmail(updateItem.email).then(function() {
         // Update successful.
         }).catch(function(error) {
         // An error happened.
         });
             
     }
-    if(request.body.passsword){
-        user.updatePassword(request.body.email).then(function() {
+    if(updateItem.passsword){
+        user.updatePassword(updateItem.email).then(function() {
         // Update successful.
         }).catch(function(error) {
         // An error happened.
@@ -220,7 +229,7 @@ exports.updateUserDetails = (request, response) => {
     }
 
     
-    document.update(request.body)
+    document.update(updateItem)
     .then(()=> {
         response.json({message: 'Updated successfully'});
     })

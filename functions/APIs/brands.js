@@ -13,6 +13,7 @@ exports.getAllBrands = (request, response) => {
                     brandId: doc.id,
                     name: doc.data().name,
 					createdAt: doc.data().createdAt,
+					updatedAt: doc.data().updatedAt,
 				});
 			});
 			return response.json(brands);
@@ -35,12 +36,13 @@ exports.postOneBrand = async (request, response) => {
             return item!="";
         })
 
-        const id = idArr.join("_");
+        const id = idArr.join("-");
 
         const newBrandItem = {
-            username_admin: request.user.username,
             name: request.body.name,
-            createdAt: new Date().toISOString()
+            createdAt: new Date(),
+            updatedAt: new Date(),
+
         }
 
         const brandsRef = db.collection('brands');
@@ -79,9 +81,6 @@ exports.getOneBrand = (request, response) => {
             if (!doc.exists) {
                 return response.status(404).json({ error: 'Brand not found' })
             }
-            if(doc.data().username_admin !== request.user.username){
-                return response.status(403).json({error:"UnAuthorized"})
-            }
 
             
 			if (doc.exists) {
@@ -103,9 +102,6 @@ exports.deleteBrand = (request, response) => {
             if (!doc.exists) {
                 return response.status(404).json({ error: 'Brand not found' })
             }
-            if(doc.data().username_admin !== request.user.username){
-                return response.status(403).json({error:"UnAuthorized"})
-            }
             return document.delete();
         })
         .then(() => {
@@ -118,6 +114,11 @@ exports.deleteBrand = (request, response) => {
 };
 
 exports.editBrand = ( request, response ) => { 
+
+    let updateItem = Object.fromEntries(
+        Object.entries(request.body).filter(([key, value]) => value != null) );
+    
+    updateItem.updatedAt = new Date();
     
     if (request.body.name == undefined || request.body.name.trim() === '') {
         return response.status(400).json({ name: 'Must not be empty' });
@@ -137,7 +138,7 @@ exports.editBrand = ( request, response ) => {
         return response.status(404).json({ error: 'Brand not found' })
     });
 
-    document.update(request.body)
+    document.update(updateItem)
     .then(()=> {
         response.json({message: 'Updated successfully'});
     })

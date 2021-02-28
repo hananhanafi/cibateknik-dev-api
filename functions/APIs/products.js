@@ -13,6 +13,7 @@ exports.getAllProducts = (request, response) => {
                     productId: doc.id,
                     name: doc.data().name,
 					createdAt: doc.data().createdAt,
+					updatedAt: doc.data().updatedAt,
 				});
 			});
 			return response.json(products);
@@ -32,9 +33,9 @@ exports.postOneProduct = async (request, response) => {
         }
         
         const newProductItem = {
-            username_admin: request.user.username,
             name: request.body.name,
-            createdAt: new Date().toISOString()
+            createdAt: new Date(),
+            updatedAt: new Date(),
         }
         const res = request.body.name.toLowerCase().split(" ");
         const idArr = res.filter(item=>{
@@ -80,10 +81,6 @@ exports.getOneProduct = (request, response) => {
             if (!doc.exists) {
                 return response.status(404).json({ error: 'Product not found' })
             }
-            if(doc.data().username_admin !== request.user.username){
-                return response.status(403).json({error:"UnAuthorized"})
-            }
-
             
 			if (doc.exists) {
                 productData = doc.data();
@@ -104,9 +101,6 @@ exports.deleteProduct = (request, response) => {
             if (!doc.exists) {
                 return response.status(404).json({ error: 'Product not found' })
             }
-            if(doc.data().username_admin !== request.user.username){
-                return response.status(403).json({error:"UnAuthorized"})
-            }
             return document.delete();
         })
         .then(() => {
@@ -119,10 +113,12 @@ exports.deleteProduct = (request, response) => {
 };
 
 exports.editProduct = ( request, response ) => { 
+
+    let updateItem = Object.fromEntries(
+        Object.entries(request.body).filter(([key, value]) => value != null) );
     
-    if (request.body.name == undefined || request.body.name.trim() === '') {
-        return response.status(400).json({ name: 'Must not be empty' });
-    }
+    updateItem.updatedAt = new Date();
+
     if(!request.params.productId){
         response.status(403).json({message: 'Not allowed to edit'});
     }
@@ -138,7 +134,7 @@ exports.editProduct = ( request, response ) => {
         return response.status(404).json({ error: 'Product not found' })
     });
 
-    document.update(request.body)
+    document.update(updateItem)
     .then(()=> {
         response.json({message: 'Updated successfully'});
     })

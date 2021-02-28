@@ -14,6 +14,7 @@ exports.getAllSuppliers = (request, response) => {
                     name: doc.data().name,
                     address: doc.data().address,
 					createdAt: doc.data().createdAt,
+					updatedat: doc.data().updatedat,
 				});
 			});
 			return response.json(suppliers);
@@ -35,7 +36,8 @@ exports.postOneSupplier = async (request, response) => {
         const newSupplier = {
             name: request.body.name,
             address: request.body.address,
-            createdAt: new Date().toISOString()
+            createdAt: new Date(),
+            updatedAt: new Date(),
         }
 
         const res = request.body.name.toLowerCase().split(" ");
@@ -114,10 +116,12 @@ exports.deleteSupplier = (request, response) => {
 };
 
 exports.editSupplier = ( request, response ) => { 
+
+    let updateItem = Object.fromEntries(
+        Object.entries(request.body).filter(([key, value]) => value != null) );
     
-    if (request.body.name == undefined || request.body.name.trim() === '') {
-        return response.status(400).json({ name: 'Must not be empty' });
-    }
+    updateItem.updatedAt = new Date();
+    
     if(!request.params.supplierId){
         response.status(403).json({message: 'Not allowed to edit'});
     }
@@ -133,7 +137,7 @@ exports.editSupplier = ( request, response ) => {
         return response.status(404).json({ error: 'Supplier not found' })
     });
 
-    document.update(request.body)
+    document.update(updateItem)
     .then(()=> {
         response.json({message: 'Updated successfully'});
     })
