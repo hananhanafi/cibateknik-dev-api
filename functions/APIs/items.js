@@ -1,7 +1,13 @@
 const { db } = require('../util/admin');
 const { validateEmptyData } = require('../util/validators');
+const { monthNames, dayNames } = require('../util/constants');
 
 exports.getAllItems = async (request, response) => {
+
+    const date = new Date();
+
+    console.log("month",monthNames[date.getMonth()]);
+    console.log("month",dayNames[date.getDay()-1]);
     
     let items = [];
 	await db
@@ -144,6 +150,8 @@ exports.getOneItem = (request, response) => {
 exports.postOneItem = async (request, response) => {
 
     try {
+
+        const date = new Date();
         
         const ids = {
             productId: request.body.productId,
@@ -158,23 +166,15 @@ exports.postOneItem = async (request, response) => {
             minimumStock: request.body.minimumStock,
             price: request.body.price,
             note: request.body.note,
-            createdAt: new Date(),
-            updatedAt: new Date(),
+            createdAt: date,
+            updatedAt: date,
             descriptions: request.body.descriptions
         }
 
         
-        
+        //check if new item valid
         const { valid, errors } = validateEmptyData(newItem);
         if (!valid) return response.status(400).json(errors);
-
-        
-        const res = request.body.name.toLowerCase().split(" ");
-        const idArr = res.filter(item=>{
-            return item!="";
-        })
-
-        const id = idArr.join("-");
 
         await db.doc(`/products/${newItem.productId}`)
         .get()
@@ -199,28 +199,127 @@ exports.postOneItem = async (request, response) => {
                 return response.status(404).json({ error: 'Supplier not found' })
             }
         })
+        //end check if new item valid
+        
+        
+        const res = request.body.name.toLowerCase().split(" ");
+        const itemIdArr = res.filter(item=>{
+            return item!="";
+        })
 
-        await db.doc(`/items/${id}`)
+        const itemId = itemIdArr.join("-");
+
+        //check if item alread exists
+        await db.doc(`/items/${itemId}`)
         .get()
         .then((doc)=>{
             if(doc.exists){
                 return response.status(404).json({ error: 'Item already exists' })
             }
         })
+        
+
+        const newMonthlyItem = {
+            ...ids,
+            itemId : itemId,
+            startStock : newItem.stock,
+            endStock: newItem.stock,
+            year: date.getFullYear(),
+            month: monthNames[date.getMonth()],
+            createdAt: date,
+            updatedAt: date,
+        }
+
+        const newDailyItem = {
+            ...ids,
+            itemId : itemId,
+            in : newItem.stock,
+            out : 0,
+            year : date.getFullYear(),
+            month : monthNames[date.getMonth()],
+            date : date.getDate(),
+            createdAt: date,
+            updatedAt: date,
+        }
+        
+        itemMonthlyId = itemId + "_" + newMonthlyItem.year + "_" + newMonthlyItem.month;
+        console.log("itemMonthlyId",itemMonthlyId);
+
+        
+        itemDailyId = itemId + "_" + date.toISOString();
+        console.log("itemDailyId",itemDailyId);
 
         db
         .collection('items')
-        .doc(id)
+        .doc(itemId)
         .set(newItem)
         .then((doc)=>{
             const responseItem = newItem;
             responseItem.id = doc.id;
+            return responseItem;
+        })
+        .then(async (responseItem)=>{
+            
+            await db.collection('items_monthly_stock').doc(itemMonthlyId)
+            .set(newMonthlyItem)
+            .then((doc)=>{
+                responseItem.monthlyStock = {id:doc.id,...newMonthlyItem};
+            })
+            .catch((err) => {
+                response.status(500).json({ error: err });
+                console.error(err);
+            });
+
+            await db.collection('items_daily_stock').doc(itemDailyId)
+            .set(newDailyItem)
+            .then((doc)=>{
+                responseItem.dailyStock =  {id:doc.id,...newDailyItem};
+            })
+            .catch((err) => {
+                response.status(500).json({ error: err });
+                console.error(err);
+            });
+
             return response.json(responseItem);
+
+
         })
         .catch((err) => {
-			response.status(500).json({ error: 'Something went wrong' });
+			response.status(500).json({ error: err });
 			console.error(err);
 		});
+
+        
+        // db
+        // .collection('items')
+        // .doc(itemId)
+        // .set(newItem)
+        // .then((doc)=>{
+        //     const responseItem = newItem;
+        //     responseItem.id = doc.id;
+        //     return response.json(responseItem);
+        // })
+        // .catch((err) => {
+		// 	response.status(500).json({ error: 'Something went wrong' });
+		// 	console.error(err);
+		// });
+        
+        
+
+        // db
+        // .collection('items_monthly_stock')
+        // .doc(id)
+        // .set(newItem)
+        // .then((doc)=>{
+        //     const responseItem = newItem;
+        //     responseItem.id = doc.id;
+        //     return response.json(responseItem);
+        // })
+        // .catch((err) => {
+		// 	response.status(500).json({ error: 'Something went wrong' });
+		// 	console.error(err);
+		// });
+        
 
         
     } catch (error) {
