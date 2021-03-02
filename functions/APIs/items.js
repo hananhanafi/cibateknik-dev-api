@@ -3,12 +3,6 @@ const { validateEmptyData } = require('../util/validators');
 const { monthNames, dayNames } = require('../util/constants');
 
 exports.getAllItems = async (request, response) => {
-
-    const date = new Date();
-
-    console.log("month",monthNames[date.getMonth()]);
-    console.log("month",dayNames[date.getDay()-1]);
-    
     let items = [];
 	await db
 		.collection('items')
@@ -242,12 +236,9 @@ exports.postOneItem = async (request, response) => {
             updatedAt: date,
         }
         
+        //create item monthly and daily stock id
         itemMonthlyId = itemId + "_" + newMonthlyItem.year + "_" + newMonthlyItem.month;
-        console.log("itemMonthlyId",itemMonthlyId);
-
-        
         itemDailyId = itemId + "_" + date.toISOString();
-        console.log("itemDailyId",itemDailyId);
 
         db
         .collection('items')
@@ -289,39 +280,6 @@ exports.postOneItem = async (request, response) => {
 			console.error(err);
 		});
 
-        
-        // db
-        // .collection('items')
-        // .doc(itemId)
-        // .set(newItem)
-        // .then((doc)=>{
-        //     const responseItem = newItem;
-        //     responseItem.id = doc.id;
-        //     return response.json(responseItem);
-        // })
-        // .catch((err) => {
-		// 	response.status(500).json({ error: 'Something went wrong' });
-		// 	console.error(err);
-		// });
-        
-        
-
-        // db
-        // .collection('items_monthly_stock')
-        // .doc(id)
-        // .set(newItem)
-        // .then((doc)=>{
-        //     const responseItem = newItem;
-        //     responseItem.id = doc.id;
-        //     return response.json(responseItem);
-        // })
-        // .catch((err) => {
-		// 	response.status(500).json({ error: 'Something went wrong' });
-		// 	console.error(err);
-		// });
-        
-
-        
     } catch (error) {
         console.error(error);
         return response.status(500).json({ error: error });
@@ -384,3 +342,90 @@ exports.editItem = ( request, response ) => {
         });
     });
 };
+
+
+exports.updatePostedItem = async (request, response) => {
+    try {
+        
+        const items_id = request.body.items_id;
+
+        await items_id.forEach(async item => {
+            let itemData = {};
+            let itemId = "";
+
+            await db
+            .doc(`/items/${item}`).get().then((doc)=>{
+                if (!doc.exists) {
+                    return response.status(404).json({ item: 'Item not found' })
+                }else{
+                    itemId = doc.id;
+                    itemData = doc.data();
+                    itemData.createdAt = new Date();
+                    itemData.updatedAt = new Date();
+                }
+                
+            })
+            .catch (error => {
+                console.error(error);
+                return response.status(500).json({ error: error });
+            })
+
+            
+            await db
+            .collection('items_posted')
+            .doc(itemId)
+            .set(itemData)
+            .then(()=>{
+                //success add item posted
+            })
+            .catch (error => {
+                console.error(error);
+                return response.status(500).json({ error: error });
+            })
+
+            
+        })
+        
+    } 
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({ error: error });
+    }
+
+    return response.status(200).json({"message":"Berhasil menambahkan item pada katalog"});
+};
+
+
+exports.deletePostedItem = async (request, response) => {
+    try {
+        
+        const items_id = request.body.items_id;
+
+        await items_id.forEach(async item => {
+            const document = db.doc(`/items_posted/${item}`);
+            await document
+                .get()
+                .then((doc) => {
+                    if (!doc.exists) {
+                        return response.status(404).json({ error: 'Item not found' })
+                    }
+                    document.delete();
+                })
+                .catch((err) => {
+                    console.error(err);
+                    return response.status(500).json({ error: err.code });
+                });
+        })
+        
+    } 
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({ error: error });
+    }
+
+
+    return response.status(200).json({"message":"Berhasil menghapus item"});
+};
+
+
+

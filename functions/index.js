@@ -29,40 +29,44 @@ app.post('/admin/login', loginAdmin);
 
 //admin products
 const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');
-app.get('/admin/products', getAllProducts);
-app.get('/admin/product/:productId', getOneProduct);
-app.post('/admin/product',auth_admin, postOneProduct);
-app.delete('/admin/product/:productId',auth_admin, deleteProduct);
-app.put('/admin/product/:productId',auth_admin, editProduct);
+app.get('/products', getAllProducts);
+app.get('/product/:productId', getOneProduct);
+app.post('/product',auth_admin, postOneProduct);
+app.delete('/product/:productId',auth_admin, deleteProduct);
+app.put('/product/:productId',auth_admin, editProduct);
 //end admin products
 
 
 //admin Suppliers
 const { getOneSupplier, getAllSuppliers, postOneSupplier, deleteSupplier, editSupplier } = require('./APIs/suppliers');
-app.get('/admin/suppliers', getAllSuppliers);
-app.get('/admin/supplier/:supplierId', getOneSupplier);
-app.post('/admin/supplier',auth_admin, postOneSupplier);
-app.delete('/admin/supplier/:supplierId',auth_admin, deleteSupplier);
-app.put('/admin/supplier/:supplierId',auth_admin, editSupplier);
+app.get('/suppliers', getAllSuppliers);
+app.get('/supplier/:supplierId', getOneSupplier);
+app.post('/supplier',auth_admin, postOneSupplier);
+app.delete('/supplier/:supplierId',auth_admin, deleteSupplier);
+app.put('/supplier/:supplierId',auth_admin, editSupplier);
 //end admin Suppliers
 
 //admin brands
 const { getOneBrand, getAllBrands, postOneBrand, deleteBrand, editBrand } = require('./APIs/brands');
-app.get('/admin/brands', getAllBrands);
-app.get('/admin/brand/:brandId', getOneBrand);
-app.post('/admin/brand',auth_admin, postOneBrand);
-app.delete('/admin/brand/:brandId',auth_admin, deleteBrand);
-app.put('/admin/brand/:brandId',auth_admin, editBrand);
+app.get('/brands', getAllBrands);
+app.get('/brand/:brandId', getOneBrand);
+app.post('/brand',auth_admin, postOneBrand);
+app.delete('/brand/:brandId',auth_admin, deleteBrand);
+app.put('/brand/:brandId',auth_admin, editBrand);
 //end admin brands
 
 
 //admin items
-const { postOneItem, getAllItems, getOneItem, deleteItem, editItem } = require('./APIs/items');
-app.get('/admin/items', getAllItems);
-app.get('/admin/item/:itemId', getOneItem);
-app.post('/admin/item',auth_admin, postOneItem);
-app.delete('/admin/item/:itemId',auth_admin, deleteItem);
-app.put('/admin/item/:itemId',auth_admin, editItem);
+const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem } = require('./APIs/items');
+app.get('/items', getAllItems);
+app.get('/item/:itemId', getOneItem);
+app.post('/item',auth_admin, postOneItem);
+app.delete('/item/:itemId',auth_admin, deleteItem);
+app.put('/item/:itemId',auth_admin, editItem);
+
+app.post('/item/post',auth_admin, updatePostedItem);
+app.delete('/item/post/delete',auth_admin, deletePostedItem);
+
 //end admin items
 
 
