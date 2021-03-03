@@ -57,7 +57,7 @@ app.put('/brand/:brandId',auth_admin, editBrand);
 
 
 //admin items
-const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem } = require('./APIs/items');
+const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem } = require('./APIs/items');
 app.get('/items', getAllItems);
 app.get('/item/:itemId', getOneItem);
 app.post('/item',auth_admin, postOneItem);
@@ -66,6 +66,9 @@ app.put('/item/:itemId',auth_admin, editItem);
 
 app.post('/item/post',auth_admin, updatePostedItem);
 app.delete('/item/post/delete',auth_admin, deletePostedItem);
+
+app.post('/item/sold',auth_admin, updateSoldItem);
+app.delete('/item/sold/delete',auth_admin, deleteSoldItem);
 
 //end admin items
 
