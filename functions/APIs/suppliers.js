@@ -10,7 +10,7 @@ exports.getAllSuppliers = (request, response) => {
 			let suppliers = [];
 			data.forEach((doc) => {
 				suppliers.push({
-                    supplierId: doc.id,
+                    supplierID: doc.id,
                     name: doc.data().name,
                     address: doc.data().address,
 					createdAt: doc.data().createdAt,
@@ -76,7 +76,7 @@ exports.postOneSupplier = async (request, response) => {
 };
 
 exports.getOneSupplier = (request, response) => {
-    const document = db.doc(`/suppliers/${request.params.supplierId}`);
+    const document = db.doc(`/suppliers/${request.params.supplierID}`);
     document
         .get()
         .then((doc) => {
@@ -97,7 +97,7 @@ exports.getOneSupplier = (request, response) => {
 };
 
 exports.deleteSupplier = (request, response) => {
-    const document = db.doc(`/suppliers/${request.params.supplierId}`);
+    const document = db.doc(`/suppliers/${request.params.supplierID}`);
     document
         .get()
         .then((doc) => {
@@ -122,10 +122,10 @@ exports.editSupplier = ( request, response ) => {
     
     updateItem.updatedAt = new Date();
     
-    if(!request.params.supplierId){
+    if(!request.params.supplierID){
         response.status(403).json({message: 'Not allowed to edit'});
     }
-    let document = db.collection('suppliers').doc(`${request.params.supplierId}`);
+    let document = db.collection('suppliers').doc(`${request.params.supplierID}`);
 
     document.get()
     .then((doc)=>{

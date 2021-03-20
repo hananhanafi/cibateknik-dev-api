@@ -30,39 +30,39 @@ app.post('/admin/login', loginAdmin);
 //admin products
 const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');
 app.get('/products', getAllProducts);
-app.get('/product/:productId', getOneProduct);
+app.get('/product/:productID', getOneProduct);
 app.post('/product',auth_admin, postOneProduct);
-app.delete('/product/:productId',auth_admin, deleteProduct);
-app.put('/product/:productId',auth_admin, editProduct);
+app.delete('/product/:productID',auth_admin, deleteProduct);
+app.put('/product/:productID',auth_admin, editProduct);
 //end admin products
 
 
 //admin Suppliers
 const { getOneSupplier, getAllSuppliers, postOneSupplier, deleteSupplier, editSupplier } = require('./APIs/suppliers');
 app.get('/suppliers', getAllSuppliers);
-app.get('/supplier/:supplierId', getOneSupplier);
+app.get('/supplier/:supplierID', getOneSupplier);
 app.post('/supplier',auth_admin, postOneSupplier);
-app.delete('/supplier/:supplierId',auth_admin, deleteSupplier);
-app.put('/supplier/:supplierId',auth_admin, editSupplier);
+app.delete('/supplier/:supplierID',auth_admin, deleteSupplier);
+app.put('/supplier/:supplierID',auth_admin, editSupplier);
 //end admin Suppliers
 
 //admin brands
 const { getOneBrand, getAllBrands, postOneBrand, deleteBrand, editBrand } = require('./APIs/brands');
 app.get('/brands', getAllBrands);
-app.get('/brand/:brandId', getOneBrand);
+app.get('/brand/:brandID', getOneBrand);
 app.post('/brand',auth_admin, postOneBrand);
-app.delete('/brand/:brandId',auth_admin, deleteBrand);
-app.put('/brand/:brandId',auth_admin, editBrand);
+app.delete('/brand/:brandID',auth_admin, deleteBrand);
+app.put('/brand/:brandID',auth_admin, editBrand);
 //end admin brands
 
 
 //admin items
 const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem } = require('./APIs/items');
 app.get('/items', getAllItems);
-app.get('/item/:itemId', getOneItem);
+app.get('/item/:itemID', getOneItem);
 app.post('/item',auth_admin, postOneItem);
-app.delete('/item/:itemId',auth_admin, deleteItem);
-app.put('/item/:itemId',auth_admin, editItem);
+app.delete('/item/:itemID',auth_admin, deleteItem);
+app.put('/item/:itemID',auth_admin, editItem);
 
 app.post('/item/post',auth_admin, updatePostedItem);
 app.delete('/item/post/delete',auth_admin, deletePostedItem);

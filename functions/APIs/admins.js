@@ -80,7 +80,7 @@ exports.signUpAdmin = (request, response) => {
 
 	if (!valid) return response.status(400).json(errors);
 
-    let token, adminId;
+    let token, adminID;
     db.doc(`/admins/${newAdmin.username}`)
     .get()
     .then((doc) => {
@@ -96,7 +96,7 @@ exports.signUpAdmin = (request, response) => {
         }
     })
     .then((data) => {
-        adminId = data.user.uid;
+        adminID = data.user.uid;
         return data.user.getIdToken();
     })
     .then((idtoken) => {
@@ -105,7 +105,7 @@ exports.signUpAdmin = (request, response) => {
             username: newAdmin.username,
             email: newAdmin.email,
             createdAt: new Date().toISOString(),
-            adminId
+            adminID
         };
         return db
                 .doc(`/admins/${newAdmin.username}`)

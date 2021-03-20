@@ -28,7 +28,7 @@ exports.getAllItems = async (request, response) => {
 
 
 exports.getOneItem = (request, response) => {
-    const document = db.doc(`/items/${request.params.itemId}`);
+    const document = db.doc(`/items/${request.params.itemID}`);
     document
         .get()
         .then((doc) => {
@@ -49,98 +49,6 @@ exports.getOneItem = (request, response) => {
         });
 };
 
-
-// async function getDescriptionItem(doc){
-//     const collectionRef = db.collection('items');
-//     let subCollectionDocs = await collectionRef.doc(doc.id).collection("description").get();
-
-//     let item = {};
-//     await subCollectionDocs.forEach(subCollectionDoc => {
-//         console.log("subcollectiondocs: ", subCollectionDoc.id);
-//         let currentID = subCollectionDoc.id
-//         let appObj = { ...subCollectionDoc.data(), ['id']: currentID }
-        
-//         item = (appObj)
-        
-//     });
-
-//     return item;
-// }
-
-
-
-// exports.getItemDescriptions = async (request, response) => {
-    
-//     let items = [];
-// 	await db
-// 		.collection('items')
-// 		.orderBy('createdAt', 'desc')
-// 		.get()
-// 		.then((data) => {
-// 			data.forEach((doc) => {
-//                 let currentID = doc.id
-//                 let appObj = { ...doc.data(), ['id']: currentID }
-                
-//                 items.push(appObj)
-// 			});
-// 		})
-// 		.catch((err) => {
-// 			console.error(err);
-// 			return response.status(500).json({ error: err});
-// 		});
-
-        
-//         return response.json({items,message: 'Succed'});
-// };
-
-// exports.getAllItems = async (request, response) => {
-//     // Get reference to all of the documents
-//     console.log("Retrieving list of documents in collection");
-
-//     const collectionRef = db.collection('items');
-//     let documents = await collectionRef.get();
-
-//     try{
-
-//         var p1 = new Promise (
-//             async function (resolve,reject){
-//                 let appObj = [];
-//                 documents.forEach(async doc => {
-
-//                     let currentID = doc.id
-
-//                     let sub = await getSub(doc)
-//                     .then((data)=>{
-//                         console.log("getsubdata",data);
-                        
-//                         appObj = { ...doc.data(), ['id']: currentID }
-//                     })
-                    
-//                     console.log("Parent Document ID: ", doc.id);
-        
-                    
-//                 })
-
-//                 console.log("resolve");
-//                 resolve(appObj);
-
-//             }
-//         )
-
-//         await p1.then((data)=>{
-//             console.log("p1",data)
-//         })
-//         console.log("ww");
-//         // })
-    
-//     }catch(err){
-//         console.log(err);
-//     }
-
-//     console.log("Done");
-        
-// };
-
 exports.postOneItem = async (request, response) => {
 
     try {
@@ -148,9 +56,9 @@ exports.postOneItem = async (request, response) => {
         const date = new Date();
         
         const ids = {
-            productId: request.body.productId,
-            brandId: request.body.brandId,
-            supplierId: request.body.supplierId,
+            productID: request.body.productID,
+            brandID: request.body.brandID,
+            supplierID: request.body.supplierID,
         }
         
         const newItem = {
@@ -162,7 +70,7 @@ exports.postOneItem = async (request, response) => {
             note: request.body.note,
             createdAt: date,
             updatedAt: date,
-            descriptions: request.body.descriptions
+            additionalData: request.body.additionalData
         }
 
         
@@ -170,7 +78,7 @@ exports.postOneItem = async (request, response) => {
         const { valid, errors } = validateEmptyData(newItem);
         if (!valid) return response.status(400).json(errors);
 
-        await db.doc(`/products/${newItem.productId}`)
+        await db.doc(`/products/${newItem.productID}`)
         .get()
         .then((doc)=>{
             if(!doc.exists){
@@ -178,7 +86,7 @@ exports.postOneItem = async (request, response) => {
             }
         })
 
-        await db.doc(`/brands/${newItem.brandId}`)
+        await db.doc(`/brands/${newItem.brandID}`)
         .get()
         .then((doc)=>{
             if(!doc.exists){
@@ -186,7 +94,7 @@ exports.postOneItem = async (request, response) => {
             }
         })
         
-        await db.doc(`/suppliers/${newItem.supplierId}`)
+        await db.doc(`/suppliers/${newItem.supplierID}`)
         .get()
         .then((doc)=>{
             if(!doc.exists){
@@ -197,14 +105,14 @@ exports.postOneItem = async (request, response) => {
         
         
         const res = request.body.name.toLowerCase().split(" ");
-        const itemIdArr = res.filter(item=>{
+        const itemIDArr = res.filter(item=>{
             return item!="";
         })
 
-        const itemId = itemIdArr.join("-");
+        const itemID = itemIDArr.join("-");
 
         //check if item alread exists
-        await db.doc(`/items/${itemId}`)
+        await db.doc(`/items/${itemID}`)
         .get()
         .then((doc)=>{
             if(doc.exists){
@@ -215,7 +123,7 @@ exports.postOneItem = async (request, response) => {
 
         const newMonthlyItem = {
             ...ids,
-            itemId : itemId,
+            itemID : itemID,
             startStock : newItem.stock,
             endStock: newItem.stock,
             year: date.getFullYear(),
@@ -226,7 +134,7 @@ exports.postOneItem = async (request, response) => {
 
         const newDailyItem = {
             ...ids,
-            itemId : itemId,
+            itemID : itemID,
             in : newItem.stock,
             out : 0,
             year : date.getFullYear(),
@@ -237,12 +145,12 @@ exports.postOneItem = async (request, response) => {
         }
         
         //create item monthly and daily stock id
-        itemMonthlyId = itemId + "_" + newMonthlyItem.year + "_" + newMonthlyItem.month;
-        itemDailyId = itemId + "_" + date.toISOString();
+        itemMonthlyId = itemID + "_" + newMonthlyItem.year + "_" + newMonthlyItem.month;
+        itemDailyId = itemID + "_" + date.toISOString();
 
         db
         .collection('items')
-        .doc(itemId)
+        .doc(itemID)
         .set(newItem)
         .then((doc)=>{
             const responseItem = newItem;
@@ -287,7 +195,7 @@ exports.postOneItem = async (request, response) => {
 };
 
 exports.deleteItem = (request, response) => {
-    const document = db.doc(`/items/${request.params.itemId}`);
+    const document = db.doc(`/items/${request.params.itemID}`);
     document
         .get()
         .then((doc) => {
@@ -316,10 +224,10 @@ exports.editItem = ( request, response ) => {
     if (request.body.name == undefined || request.body.name.trim() === '') {
         return response.status(400).json({ name: 'Must not be empty' });
     }
-    if(!request.params.itemId){
+    if(!request.params.itemID){
         response.status(403).json({message: 'Not allowed to edit'});
     }
-    let document = db.collection('items').doc(`${request.params.itemId}`);
+    let document = db.collection('items').doc(`${request.params.itemID}`);
 
     document.get()
     .then((doc)=>{
@@ -351,14 +259,14 @@ exports.updatePostedItem = async (request, response) => {
 
         await items_id.forEach(async item => {
             let itemData = {};
-            let itemId = "";
+            let itemID = "";
 
             await db
             .doc(`/items/${item}`).get().then((doc)=>{
                 if (!doc.exists) {
                     return response.status(404).json({ item: 'Item not found' })
                 }else{
-                    itemId = doc.id;
+                    itemID = doc.id;
                     itemData = doc.data();
                     itemData.createdAt = new Date();
                     itemData.updatedAt = new Date();
@@ -373,7 +281,7 @@ exports.updatePostedItem = async (request, response) => {
             
             await db
             .collection('items_posted')
-            .doc(itemId)
+            .doc(itemID)
             .set(itemData)
             .then(()=>{
                 //success add item posted
@@ -435,14 +343,14 @@ exports.updateSoldItem = async (request, response) => {
 
         await items_id.forEach(async item => {
             let itemData = {};
-            let itemId = "";
+            let itemID = "";
 
             await db
             .doc(`/items/${item}`).get().then((doc)=>{
                 if (!doc.exists) {
                     return response.status(404).json({ item: 'Item not found' })
                 }else{
-                    itemId = doc.id;
+                    itemID = doc.id;
                     itemData = doc.data();
                     itemData.createdAt = new Date();
                     itemData.updatedAt = new Date();
@@ -457,7 +365,7 @@ exports.updateSoldItem = async (request, response) => {
             
             await db
             .collection('items_sold')
-            .doc(itemId)
+            .doc(itemID)
             .set(itemData)
             .then(()=>{
                 //success add item Sold

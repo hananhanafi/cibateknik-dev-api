@@ -10,7 +10,7 @@ exports.getAllBrands = (request, response) => {
 			let brands = [];
 			data.forEach((doc) => {
 				brands.push({
-                    brandId: doc.id,
+                    brandID: doc.id,
                     name: doc.data().name,
 					createdAt: doc.data().createdAt,
 					updatedAt: doc.data().updatedAt,
@@ -74,7 +74,7 @@ exports.postOneBrand = async (request, response) => {
 };
 
 exports.getOneBrand = (request, response) => {
-    const document = db.doc(`/brands/${request.params.brandId}`);
+    const document = db.doc(`/brands/${request.params.brandID}`);
     document
         .get()
         .then((doc) => {
@@ -95,7 +95,7 @@ exports.getOneBrand = (request, response) => {
 };
 
 exports.deleteBrand = (request, response) => {
-    const document = db.doc(`/brands/${request.params.brandId}`);
+    const document = db.doc(`/brands/${request.params.brandID}`);
     document
         .get()
         .then((doc) => {
@@ -123,10 +123,10 @@ exports.editBrand = ( request, response ) => {
     if (request.body.name == undefined || request.body.name.trim() === '') {
         return response.status(400).json({ name: 'Must not be empty' });
     }
-    if(!request.params.brandId){
+    if(!request.params.brandID){
         response.status(403).json({message: 'Not allowed to edit'});
     }
-    let document = db.collection('brands').doc(`${request.params.brandId}`);
+    let document = db.collection('brands').doc(`${request.params.brandID}`);
 
     document.get()
     .then((doc)=>{

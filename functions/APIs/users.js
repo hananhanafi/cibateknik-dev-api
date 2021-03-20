@@ -57,7 +57,7 @@ exports.signUpUser = (request, response) => {
 
 	if (!valid) return response.status(400).json(errors);
 
-    let token, userId;
+    let token, userID;
     db
         .doc(`/users/${newUser.username}`)
         .get()
@@ -74,7 +74,7 @@ exports.signUpUser = (request, response) => {
             }
         })
         .then((data) => {
-            userId = data.user.uid;
+            userID = data.user.uid;
             return data.user.getIdToken();
         })
         .then((idtoken) => {
@@ -87,7 +87,7 @@ exports.signUpUser = (request, response) => {
                 address: newUser.address,
                 email: newUser.email,
                 createdAt: new Date().toISOString(),
-                userId
+                userID
             };
             // return db
             //         .doc(`/users/${newUser.username}`)
