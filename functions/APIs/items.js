@@ -1,6 +1,6 @@
 const { db } = require('../util/admin');
 const { validateEmptyData } = require('../util/validators');
-const { monthNames, dayNames } = require('../util/constants');
+const { monthNames } = require('../util/constants');
 
 exports.getAllItems = async (request, response) => {
     let items = [];

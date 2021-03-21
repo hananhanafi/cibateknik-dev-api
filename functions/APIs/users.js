@@ -1,12 +1,6 @@
-const { admin, db } = require('../util/admin');
-const config = require('../util/config');
-
-const firebase = require('firebase');
-
-firebase.initializeApp(config);
+const { admin, db, firebase } = require('../util/admin');
 
 const { validateLoginData, validateSignUpData } = require('../util/validators');
-const { request } = require('http');
 
 // Login
 exports.loginUser = (request, response) => {
