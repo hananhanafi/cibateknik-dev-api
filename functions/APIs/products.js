@@ -1,27 +1,54 @@
 const { db, fieldValue } = require('../util/admin');
+const { createSubstringArray } = require('../util/helpers');
 
-exports.getAllProducts = (request, response) => {
-	db
-    .collection('products')
-    .orderBy('createdAt', 'desc')
-    .get()
-    .then((data) => {
-        let products = [];
-        data.forEach((doc) => {
-            products.push({
-                productID: doc.id,
-                name: doc.data().name,
-                additionalData: doc.data().additionalData,
-                createdAt: doc.data().createdAt,
-                updatedAt: doc.data().updatedAt,
+exports.getAllProducts = async (request, response) => {
+    const body = request.body;
+
+    if(body.search){
+        const search = body.search.toLowerCase();
+        db
+        .collection("products").where("searchKeywordsArray", "array-contains", search)
+        .get()
+        .then((data) => {
+            let products = [];
+            data.forEach((doc) => {
+                products.push({
+                    productID: doc.id,
+                    name: doc.data().name,
+                    additionalData: doc.data().additionalData,
+                    createdAt: doc.data().createdAt,
+                    updatedAt: doc.data().updatedAt,
+                });
             });
+            return response.json(products);
+        })
+        .catch((err) => {
+            console.error(err);
+            return response.status(500).json({ error: err});
         });
-        return response.json(products);
-    })
-    .catch((err) => {
-        console.error(err);
-        return response.status(500).json({ error: err});
-    });
+    }else{
+        db
+        .collection('products')
+        .orderBy('createdAt', 'desc')
+        .get()
+        .then((data) => {
+            let products = [];
+            data.forEach((doc) => {
+                products.push({
+                    productID: doc.id,
+                    name: doc.data().name,
+                    additionalData: doc.data().additionalData,
+                    createdAt: doc.data().createdAt,
+                    updatedAt: doc.data().updatedAt,
+                });
+            });
+            return response.json(products);
+        })
+        .catch((err) => {
+            console.error(err);
+            return response.status(500).json({ error: err});
+        });
+    }
 };
 
 exports.postOneProduct = async (request, response) => {
@@ -40,11 +67,14 @@ exports.postOneProduct = async (request, response) => {
         }
         
         const res = request.body.name.toLowerCase().split(" ");
-        const idArr = res.filter(item=>{
+        const nameArr = res.filter(item=>{
             return item!="";
         })
+        
+        const searchKeywordsArray = await createSubstringArray(newProductItem.name);
+        newProductItem.searchKeywordsArray = searchKeywordsArray;
 
-        const id = idArr.join("-");
+        const idProduct = nameArr.join("-");
         
         const productsRef = db.collection('products');
         const product = await productsRef.where('name', '==', newProductItem.name).limit(1).get();
@@ -52,10 +82,11 @@ exports.postOneProduct = async (request, response) => {
         if(product.empty){
             db
             .collection('products')
-            .doc(id)
+            .doc(idProduct)
             .set(newProductItem)
             .then((doc)=>{
                 const responseProductItem = newProductItem;
+                delete responseProductItem.searchKeywordsArray;
                 responseProductItem.id = doc.id;
                 return response.json(responseProductItem);
             })
@@ -165,10 +196,14 @@ exports.editProduct = async ( request, response ) => {
     
     updateItem.updatedAt = new Date();
     
+        
+    const searchKeywordsArray = await createSubstringArray(updateItem.name);
+    updateItem.searchKeywordsArray = searchKeywordsArray;
+
     // updateItem.additionalData = fieldValue.arrayRemove('Diameter','Ukuran');
-    if(updateItemdeletedAdditionalData){
-        updateItem.additionalData = fieldValue.arrayRemove(...updateItemdeletedAdditionalData);
-        delete updateItemdeletedAdditionalData;
+    if(updateItem.deletedAdditionalData){
+        updateItem.additionalData = fieldValue.arrayRemove(...updateItem.deletedAdditionalData);
+        delete updateItem.deletedAdditionalData;
     }
     if(updateItem.newAdditionalData){
         updateItem.additionalData = fieldValue.arrayUnion(...updateItem.newAdditionalData);
