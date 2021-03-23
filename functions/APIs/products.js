@@ -2,32 +2,41 @@ const { db, fieldValue } = require('../util/admin');
 const { createSubstringArray } = require('../util/helpers');
 
 exports.getAllProducts = async (request, response) => {
-    const body = request.body;
-    const order = body.order == 'asc' ? 'asc' : 'desc';
+    const queryRequest = request.query;
+    const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
+    const search = queryRequest.search;
+    const limit = queryRequest.limit ? queryRequest.limit : 10;
 
+    //query get all data for counting total data
     let queryGetAll = db.collection('products').orderBy('createdAt', order);
-    const snapshot = await queryGetAll.get();
-    const total = snapshot.docs.length;
-    const first_page = 1;
-    const last_page = Math.ceil(total/10);
-    const current_page = body.page ? body.page : 1;
-    const search = body.search;
-
-    const limit = 3;
-
-    let from = total > 0 ? 1 : 0 ;
-    let to = total > limit ? limit : total;
-
-    let query = db.collection('products')
+    
+    //query get limited data for pagination
+    let queryGetData = db.collection('products')
     .orderBy('createdAt', order)
     .limit(limit);
     
     if(search){
-        query = db.collection('products')
+        queryGetAll = db.collection('products')
+        .orderBy('createdAt', order)
+        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+
+        queryGetData = db.collection('products')
         .orderBy('createdAt', order)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
         .limit(limit);
+        
     }
+
+    const snapshot = await queryGetAll.get();
+    const total = snapshot.docs.length;
+    const first_page = 1;
+    const last_page = Math.ceil(total/limit);
+    const current_page = queryRequest.page ? queryRequest.page : 1;
+
+
+    let first_index = total > 0 ? 1 : 0 ;
+    let last_index = total > limit ? limit : total;
+
     
     if(current_page>1){
         if(search){
@@ -38,7 +47,7 @@ exports.getAllProducts = async (request, response) => {
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
 
-            query = db.collection('products')
+            queryGetData = db.collection('products')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
             .orderBy('createdAt', order)
             .startAfter(last.data().createdAt)
@@ -50,25 +59,25 @@ exports.getAllProducts = async (request, response) => {
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
             
-            query = db.collection('products')
+            queryGetData = db.collection('products')
             .orderBy('createdAt', order)
             .startAfter(last.data().createdAt)
             .limit(limit)
         }
 
-        const snapshot = await query.get();
-        from = ((limit*current_page)-(limit-1));
-        to = from + snapshot.docs.length-1;
+        const snapshot = await queryGetData.get();
+        first_index = ((limit*current_page)-(limit-1));
+        last_index = first_index + snapshot.docs.length-1;
     }
 
-    query.get()
+    queryGetData.get()
     .then((data) => {
         let products = {
             data:[],
             meta: {
-                from: from,
-                to: to,
-                current_page: current_page,
+                first_index: first_index,
+                last_index: last_index,
+                current_page: parseInt(current_page),
                 first_page: first_page,
                 last_page: last_page,
                 total: total,
