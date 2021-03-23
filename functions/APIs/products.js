@@ -3,52 +3,92 @@ const { createSubstringArray } = require('../util/helpers');
 
 exports.getAllProducts = async (request, response) => {
     const body = request.body;
+    const order = body.order == 'asc' ? 'asc' : 'desc';
 
-    if(body.search){
-        const search = body.search.toLowerCase();
-        db
-        .collection("products").where("searchKeywordsArray", "array-contains", search)
-        .get()
-        .then((data) => {
-            let products = [];
-            data.forEach((doc) => {
-                products.push({
-                    productID: doc.id,
-                    name: doc.data().name,
-                    additionalData: doc.data().additionalData,
-                    createdAt: doc.data().createdAt,
-                    updatedAt: doc.data().updatedAt,
-                });
-            });
-            return response.json(products);
-        })
-        .catch((err) => {
-            console.error(err);
-            return response.status(500).json({ error: err});
-        });
-    }else{
-        db
-        .collection('products')
-        .orderBy('createdAt', 'desc')
-        .get()
-        .then((data) => {
-            let products = [];
-            data.forEach((doc) => {
-                products.push({
-                    productID: doc.id,
-                    name: doc.data().name,
-                    additionalData: doc.data().additionalData,
-                    createdAt: doc.data().createdAt,
-                    updatedAt: doc.data().updatedAt,
-                });
-            });
-            return response.json(products);
-        })
-        .catch((err) => {
-            console.error(err);
-            return response.status(500).json({ error: err});
-        });
+    let queryGetAll = db.collection('products').orderBy('createdAt', order);
+    const snapshot = await queryGetAll.get();
+    const total = snapshot.docs.length;
+    const first_page = 1;
+    const last_page = Math.ceil(total/10);
+    const current_page = body.page ? body.page : 1;
+    const search = body.search;
+
+    const limit = 3;
+
+    let from = total > 0 ? 1 : 0 ;
+    let to = total > limit ? limit : total;
+
+    let query = db.collection('products')
+    .orderBy('createdAt', order)
+    .limit(limit);
+    
+    if(search){
+        query = db.collection('products')
+        .orderBy('createdAt', order)
+        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+        .limit(limit);
     }
+    
+    if(current_page>1){
+        if(search){
+            const first = db.collection('products')
+            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            .orderBy('createdAt', order)
+            .limit((limit*current_page)-limit);
+            const snapshotFirst = await first.get();
+            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+
+            query = db.collection('products')
+            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            .orderBy('createdAt', order)
+            .startAfter(last.data().createdAt)
+            .limit(limit)
+        }else{
+            const first = db.collection('products')
+            .orderBy('createdAt', order)
+            .limit((limit*current_page)-limit);
+            const snapshotFirst = await first.get();
+            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+            
+            query = db.collection('products')
+            .orderBy('createdAt', order)
+            .startAfter(last.data().createdAt)
+            .limit(limit)
+        }
+
+        const snapshot = await query.get();
+        from = ((limit*current_page)-(limit-1));
+        to = from + snapshot.docs.length-1;
+    }
+
+    query.get()
+    .then((data) => {
+        let products = {
+            data:[],
+            meta: {
+                from: from,
+                to: to,
+                current_page: current_page,
+                first_page: first_page,
+                last_page: last_page,
+                total: total,
+            }
+        };
+        data.forEach((doc) => {
+            products.data.push({
+                productID: doc.id,
+                name: doc.data().name,
+                additionalData: doc.data().additionalData,
+                createdAt: doc.data().createdAt,
+                updatedAt: doc.data().updatedAt,
+            });
+        });
+        return response.json(products);
+    })
+    .catch((err) => {
+        console.error(err);
+        return response.status(500).json({ error: err});
+    });
 };
 
 exports.postOneProduct = async (request, response) => {
