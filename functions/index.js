@@ -51,6 +51,15 @@ app.delete('/brand/:brandID',auth_admin, deleteBrand);
 app.put('/brand/:brandID',auth_admin, editBrand);
 //end admin brands
 
+//admin categories
+const { getOneCategory, getAllCategories, postOneCategory, deleteCategory, editCategory } = require('./APIs/categories');
+app.get('/categories', getAllCategories);
+app.get('/category/:categoryID', getOneCategory);
+app.post('/category',auth_admin, postOneCategory);
+app.delete('/category/:categoryID',auth_admin, deleteCategory);
+app.put('/category/:categoryID',auth_admin, editCategory);
+//end admin categories
+
 //admin items
 const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem } = require('./APIs/items');
 app.get('/items', getAllItems);

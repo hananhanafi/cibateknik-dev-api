@@ -1,50 +1,27 @@
 const { db } = require('../util/admin');
 const { createSubstringArray } = require('../util/helpers');
 
-// exports.getAllBrands = (request, response) => {
-    
-// 	db
-// 		.collection('brands')
-// 		.orderBy('createdAt', 'desc')
-// 		.get()
-// 		.then((data) => {
-// 			let brands = [];
-// 			data.forEach((doc) => {
-// 				brands.push({
-//                     brandID: doc.id,
-//                     name: doc.data().name,
-// 					createdAt: doc.data().createdAt,
-// 					updatedAt: doc.data().updatedAt,
-// 				});
-// 			});
-// 			return response.json(brands);
-// 		})
-// 		.catch((err) => {
-// 			console.error(err);
-// 			return response.status(500).json({ error: err});
-// 		});
-// };
 
-exports.getAllBrands= async (request, response) => {
+exports.getAllCategories= async (request, response) => {
     const queryRequest = request.query;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
     const limit = queryRequest.limit ? queryRequest.limit : 10;
 
     //query get all data for counting total data
-    let queryGetAll = db.collection('brands').orderBy('createdAt', order);
+    let queryGetAll = db.collection('categories').orderBy('createdAt', order);
     
     //query get limited data for pagination
-    let queryGetData = db.collection('brands')
+    let queryGetData = db.collection('categories')
     .orderBy('createdAt', order)
     .limit(limit);
     
     if(search){
-        queryGetAll = db.collection('brands')
+        queryGetAll = db.collection('categories')
         .orderBy('createdAt', order)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
 
-        queryGetData = db.collection('brands')
+        queryGetData = db.collection('categories')
         .orderBy('createdAt', order)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
         .limit(limit);
@@ -64,26 +41,26 @@ exports.getAllBrands= async (request, response) => {
     
     if(current_page>1){
         if(search){
-            const first = db.collection('brands')
+            const first = db.collection('categories')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
             .orderBy('createdAt', order)
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
 
-            queryGetData = db.collection('brands')
+            queryGetData = db.collection('categories')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
             .orderBy('createdAt', order)
             .startAfter(last.data().createdAt)
             .limit(limit)
         }else{
-            const first = db.collection('brands')
+            const first = db.collection('categories')
             .orderBy('createdAt', order)
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
             
-            queryGetData = db.collection('brands')
+            queryGetData = db.collection('categories')
             .orderBy('createdAt', order)
             .startAfter(last.data().createdAt)
             .limit(limit)
@@ -96,7 +73,7 @@ exports.getAllBrands= async (request, response) => {
 
     queryGetData.get()
     .then((data) => {
-        let brands = {
+        let categories = {
             data:[],
             meta: {
                 first_index: first_index,
@@ -108,15 +85,15 @@ exports.getAllBrands= async (request, response) => {
             }
         };
         data.forEach((doc) => {
-            brands.data.push({
-                brandID: doc.id,
-                brandUID: doc.data().brandUID,
+            categories.data.push({
+                categoryID: doc.id,
+                categoryUID: doc.data().categoryUID,
                 name: doc.data().name,
                 createdAt: doc.data().createdAt,
                 updatedAt: doc.data().updatedAt,
             });
         });
-        return response.json(brands);
+        return response.json(categories);
     })
     .catch((err) => {
         console.error(err);
@@ -124,7 +101,7 @@ exports.getAllBrands= async (request, response) => {
     });
 };
 
-exports.postOneBrand = async (request, response) => {
+exports.postOneCategory = async (request, response) => {
 
     try {
         
@@ -136,10 +113,10 @@ exports.postOneBrand = async (request, response) => {
             return item!="";
         })
 
-        const brandUID = nameArr.join("-");
+        const categoryUID = nameArr.join("-");
 
-        const newBrandItem = {
-            brandUID: brandUID,
+        const newCategory = {
+            categoryUID: categoryUID,
             name: request.body.name,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -147,21 +124,21 @@ exports.postOneBrand = async (request, response) => {
         }
 
         
-        const searchKeywordsArray = await createSubstringArray(newBrandItem.name);
-        newBrandItem.searchKeywordsArray = searchKeywordsArray;
+        const searchKeywordsArray = await createSubstringArray(newCategory.name);
+        newCategory.searchKeywordsArray = searchKeywordsArray;
 
-        const brandsRef = db.collection('brands');
-        const brand = await brandsRef.where('name', '==', newBrandItem.name).limit(1).get();
+        const categoriesRef = db.collection('categories');
+        const category = await categoriesRef.where('name', '==', newCategory.name).limit(1).get();
 
-        if(brand.empty){
+        if(category.empty){
             db
-            .collection('brands')
-            .add(newBrandItem)
+            .collection('categories')
+            .add(newCategory)
             .then((doc)=>{
-                const responseBrandItem = newBrandItem;
-                delete responseBrandItem.searchKeywordsArray;
-                responseBrandItem.id = doc.id;
-                return response.json(responseBrandItem);
+                const responseCategory = newCategory;
+                delete responseCategory.searchKeywordsArray;
+                responseCategory.id = doc.id;
+                return response.json(responseCategory);
             })
             .catch((err) => {
                 response.status(500).json({ message: 'Something went wrong' });
@@ -169,7 +146,7 @@ exports.postOneBrand = async (request, response) => {
             });
 
         }else{
-            return response.status(400).json({ message: 'Brand already exists' });
+            return response.status(400).json({ message: 'Category already exists' });
         }
         
     } catch (error) {
@@ -178,19 +155,19 @@ exports.postOneBrand = async (request, response) => {
     }
 };
 
-exports.getOneBrand = (request, response) => {
-    const document = db.doc(`/brands/${request.params.brandID}`);
+exports.getOneCategory = (request, response) => {
+    const document = db.doc(`/categories/${request.params.categoryID}`);
     document
         .get()
         .then((doc) => {
             if (!doc.exists) {
-                return response.status(404).json({ message: 'Brand not found' })
+                return response.status(404).json({ message: 'Category not found' })
             }
 
             
 			if (doc.exists) {
-                brandData = doc.data();
-                return response.json(brandData);
+                categoryData = doc.data();
+                return response.json(categoryData);
 			}	
         })
         .catch((err) => {
@@ -199,13 +176,13 @@ exports.getOneBrand = (request, response) => {
         });
 };
 
-exports.deleteBrand = (request, response) => {
-    const document = db.doc(`/brands/${request.params.brandID}`);
+exports.deleteCategory = (request, response) => {
+    const document = db.doc(`/categories/${request.params.categoryID}`);
     document
         .get()
         .then((doc) => {
             if (!doc.exists) {
-                return response.status(404).json({ message: 'Brand not found' })
+                return response.status(404).json({ message: 'Category not found' })
             }
             return document.delete();
         })
@@ -218,38 +195,38 @@ exports.deleteBrand = (request, response) => {
         });
 };
 
-exports.editBrand = async ( request, response ) => { 
+exports.editCategory = async ( request, response ) => { 
 
-    let updateBrand = Object.fromEntries(
+    let updateCategory = Object.fromEntries(
         Object.entries(request.body).filter(([key, value]) => value != null) );
     
-    updateBrand.updatedAt = new Date();
+    updateCategory.updatedAt = new Date();
     
     if (request.body.name == undefined || request.body.name.trim() === '') {
         return response.status(400).json({ name: 'Must not be empty' });
     }
-    if(!request.params.brandID){
+    if(!request.params.categoryID){
         response.status(403).json({message: 'Not allowed to edit'});
     }
-    let document = db.collection('brands').doc(`${request.params.brandID}`);
+    let document = db.collection('categories').doc(`${request.params.categoryID}`);
 
     document.get()
     .then(async (doc)=>{
         if (!doc.exists) {
-            return response.status(404).json({ message: 'Brand not found' })
+            return response.status(404).json({ message: 'Category not found' })
         }
         
         if(doc.data().name!=request.body.name){
-            //check if brand already exixsts
-            const brandsRef = db.collection('brands');
-            const brand = await brandsRef.where('name', '==', request.body.name).limit(1).get();
-            if(!brand.empty){
-                return response.status(400).json({ brand: 'Brand/Merk ' + request.body.name + ' sudah ada' });
+            //check if category already exixsts
+            const categoriesRef = db.collection('categories');
+            const category = await categoriesRef.where('name', '==', request.body.name).limit(1).get();
+            if(!category.empty){
+                return response.status(400).json({ category: 'Kategori ' + request.body.name + ' sudah ada' });
             }
         }
     })
     .catch((err) => {
-        return response.status(404).json({ message: 'Brand not found' })
+        return response.status(404).json({ message: 'Category not found' })
     });
 
     
@@ -257,16 +234,16 @@ exports.editBrand = async ( request, response ) => {
     const nameArr = res.filter(item=>{
         return item!="";
     })
-    const brandUID = nameArr.join("-");
+    const categoryUID = nameArr.join("-");
 
-    updateBrand.brandUID = brandUID;    
-    updateBrand.updatedAt = new Date();
+    updateCategory.categoryUID = categoryUID;    
+    updateCategory.updatedAt = new Date();
     
-    const searchKeywordsArray = await createSubstringArray(updateBrand.name);
-    updateBrand.searchKeywordsArray = searchKeywordsArray;
+    const searchKeywordsArray = await createSubstringArray(updateCategory.name);
+    updateCategory.searchKeywordsArray = searchKeywordsArray;
 
 
-    document.update(updateBrand)
+    document.update(updateCategory)
     .then(()=> {
         response.json({message: 'Updated successfully'});
     })

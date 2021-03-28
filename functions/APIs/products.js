@@ -86,6 +86,7 @@ exports.getAllProducts = async (request, response) => {
         data.forEach((doc) => {
             products.data.push({
                 productID: doc.id,
+                productUID: doc.data().productUID,
                 name: doc.data().name,
                 additionalData: doc.data().additionalData,
                 createdAt: doc.data().createdAt,
@@ -103,27 +104,29 @@ exports.getAllProducts = async (request, response) => {
 exports.postOneProduct = async (request, response) => {
 
     try {
-        
         if (request.body.name == undefined || request.body.name.trim() === '') {
             return response.status(400).json({ name: 'Must not be empty' });
-        }
-        
-        const newProductItem = {
-            name: request.body.name ? request.body.name : null,
-            additionalData: request.body.additionalData ? request.body.additionalData : [] ,
-            createdAt: new Date(),
-            updatedAt: new Date(),
         }
         
         const res = request.body.name.toLowerCase().split(" ");
         const nameArr = res.filter(item=>{
             return item!="";
         })
+        const productUID = nameArr.join("-");
+
+
+        const newProductItem = {
+            productUID: productUID,
+            name: request.body.name ? request.body.name : null,
+            additionalData: request.body.additionalData ? request.body.additionalData : [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        }
+        
         
         const searchKeywordsArray = await createSubstringArray(newProductItem.name);
         newProductItem.searchKeywordsArray = searchKeywordsArray;
 
-        const idProduct = nameArr.join("-");
         
         const productsRef = db.collection('products');
         const product = await productsRef.where('name', '==', newProductItem.name).limit(1).get();
@@ -131,8 +134,8 @@ exports.postOneProduct = async (request, response) => {
         if(product.empty){
             db
             .collection('products')
-            .doc(idProduct)
-            .set(newProductItem)
+            // .doc(productUID)
+            .add(newProductItem)
             .then((doc)=>{
                 const responseProductItem = newProductItem;
                 delete responseProductItem.searchKeywordsArray;
@@ -160,7 +163,7 @@ exports.getOneProduct = (request, response) => {
     .get()
     .then((doc) => {
         if (!doc.exists) {
-            return response.status(404).json({ error: 'Produk tidak ditemukan' })
+            return response.status(404).json({ message: 'Produk tidak ditemukan' })
         }
         
         if (doc.exists) {
@@ -181,7 +184,7 @@ exports.deleteProduct = (request, response) => {
         .get()
         .then((doc) => {
             if (!doc.exists) {
-                return response.status(404).json({ error: 'Produk tidak ditemukan' })
+                return response.status(404).json({ message: 'Produk tidak ditemukan' })
             }
             
             db.collection('items').where('productID','==',productID).get()
@@ -221,43 +224,51 @@ exports.editProduct = async ( request, response ) => {
 
     //check if product not found
     let document = db.collection('products').doc(`${request.params.productID}`);
-    document.get()
-    .then((doc)=>{
+    await document.get()
+    .then(async(doc)=>{
         if (!doc.exists) {
-            return response.status(404).json({ error: 'Produk tidak ditemukan' })
+            return response.status(404).json({ message: 'Produk tidak ditemukan' })
+        }
+
+        if(doc.data().name!=request.body.name){
+            //check if product already exixsts
+            const productsRef = db.collection('products');
+            const product = await productsRef.where('name', '==', request.body.name).limit(1).get();
+            if(!product.empty){
+                return response.status(400).json({ product: 'Produk ' + request.body.name + ' sudah ada' });
+            }
+
         }
     })
     .catch((err) => {
-        return response.status(404).json({ error: 'Produk tidak ditemukan' })
+        return response.status(404).json({ message: 'Produk tidak ditemukan' })
     });
-    
-    //check if product already exixsts
-    const productsRef = db.collection('products');
-    const product = await productsRef.where('name', '==', request.body.name).limit(1).get();
-    if(!product.empty){
-        return response.status(400).json({ product: 'Produk ' + request.body.name + ' sudah ada' });
-    }
-
 
     let updateItem = Object.fromEntries(
         Object.entries(request.body).filter(([key, value]) => value != null && key) 
     );
     
+    const res = request.body.name.toLowerCase().split(" ");
+    const nameArr = res.filter(item=>{
+        return item!="";
+    })
+    const productUID = nameArr.join("-");
+
+    updateItem.productUID = productUID;    
     updateItem.updatedAt = new Date();
     
-        
     const searchKeywordsArray = await createSubstringArray(updateItem.name);
     updateItem.searchKeywordsArray = searchKeywordsArray;
 
     // updateItem.additionalData = fieldValue.arrayRemove('Diameter','Ukuran');
-    if(updateItem.deletedAdditionalData){
-        updateItem.additionalData = fieldValue.arrayRemove(...updateItem.deletedAdditionalData);
-        delete updateItem.deletedAdditionalData;
-    }
-    if(updateItem.newAdditionalData){
-        updateItem.additionalData = fieldValue.arrayUnion(...updateItem.newAdditionalData);
-        delete updateItem.newAdditionalData;
-    }
+    // if(updateItem.deletedAdditionalData){
+    //     updateItem.additionalData = fieldValue.arrayRemove(...updateItem.deletedAdditionalData);
+    //     delete updateItem.deletedAdditionalData;
+    // }
+    // if(updateItem.newAdditionalData){
+    //     updateItem.additionalData = fieldValue.arrayUnion(...updateItem.newAdditionalData);
+    //     delete updateItem.newAdditionalData;
+    // }
 
     document.update(updateItem)
     .then(()=> {

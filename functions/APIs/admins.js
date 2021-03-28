@@ -24,7 +24,7 @@ exports.loginAdmin = (request, response) => {
             console.error(error);
             return response.status(403).json({ 
                 error:error,
-                message: 'wrong credentials, please try again'
+                message: 'Email atau password salah!'
             });
         })
 };
@@ -47,7 +47,7 @@ exports.signUpAdmin = (request, response) => {
     .get()
     .then((doc) => {
         if (doc.exists) {
-            return response.status(400).json({ username: 'this username is already taken' });
+            return response.status(400).json({ username: 'Username sudah terdaftar' });
         } else {
             return firebase
                     .auth()
@@ -79,7 +79,7 @@ exports.signUpAdmin = (request, response) => {
     .catch((err) => {
         console.error(err);
         if (err.code === 'auth/email-already-in-use') {
-            return response.status(400).json({ email: 'Email already in use' });
+            return response.status(400).json({ email: 'Email sudah terdaftar' });
         } else {
             return response.status(500).json({ general: 'Something went wrong, please try again' });
         }
