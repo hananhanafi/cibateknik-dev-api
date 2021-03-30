@@ -7,6 +7,6 @@ const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
 ];
 
 
-const dayNames = ["Senin", "Selasa", "Rabu", "Jum'at", "Sabtu", "Minggu" ]
+const dayNames = ["Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu", "Minggu" ]
 
 module.exports = { monthNames, dayNames };
