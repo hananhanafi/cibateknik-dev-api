@@ -2,20 +2,36 @@ const { db, fieldValue } = require('../util/admin');
 const { createSubstringArray } = require('../util/helpers');
 
 exports.getAllProducts = async (request, response) => {
+
     const queryRequest = request.query;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
+    const category = queryRequest.category ? queryRequest.category : null;
     const limit = queryRequest.limit ? queryRequest.limit : 10;
 
     //query get all data for counting total data
     let queryGetAll = db.collection('products').orderBy('createdAt', order);
-    
+    console.log("queryRequest",queryRequest);
+    console.log("category",category);
     //query get limited data for pagination
     let queryGetData = db.collection('products')
     .orderBy('createdAt', order)
     .limit(limit);
-    
-    if(search){
+
+    if(search && category){
+        queryGetAll = db.collection('products')
+        .orderBy('createdAt', order)
+        .where('category.id','==', category)
+        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+
+        queryGetData = db.collection('products')
+        .orderBy('createdAt', order)
+        .where('category.id','==', category)
+        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+        .limit(limit);
+
+    }
+    else if(search){
         queryGetAll = db.collection('products')
         .orderBy('createdAt', order)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
@@ -25,6 +41,17 @@ exports.getAllProducts = async (request, response) => {
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
         .limit(limit);
         
+    }
+    else if(category) {
+        queryGetAll = db.collection('products')
+        .orderBy('createdAt', order)
+        .where('category.id','==', category)
+
+        queryGetData = db.collection('products')
+        .orderBy('createdAt', order)
+        .where('category.id','==', category)
+        .limit(limit);
+
     }
 
     const snapshot = await queryGetAll.get();
@@ -39,7 +66,24 @@ exports.getAllProducts = async (request, response) => {
 
     
     if(current_page>1){
-        if(search){
+        if(search & category){
+            const first = db.collection('products')
+            .where('category.id','==', category)
+            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            .orderBy('createdAt', order)
+            .limit((limit*current_page)-limit);
+            const snapshotFirst = await first.get();
+            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+
+            queryGetData = db.collection('products')
+            .where('category.id','==', category)
+            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            .orderBy('createdAt', order)
+            .startAfter(last.data().createdAt)
+            .limit(limit)
+
+        }
+        else if(search){
             const first = db.collection('products')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
             .orderBy('createdAt', order)
@@ -49,6 +93,20 @@ exports.getAllProducts = async (request, response) => {
 
             queryGetData = db.collection('products')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            .orderBy('createdAt', order)
+            .startAfter(last.data().createdAt)
+            .limit(limit)
+        }
+        else if(category){
+            const first = db.collection('products')
+            .where('category.id','==', category)
+            .orderBy('createdAt', order)
+            .limit((limit*current_page)-limit);
+            const snapshotFirst = await first.get();
+            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+
+            queryGetData = db.collection('products')
+            .where('category.id','==', category)
             .orderBy('createdAt', order)
             .startAfter(last.data().createdAt)
             .limit(limit)
@@ -88,6 +146,7 @@ exports.getAllProducts = async (request, response) => {
                 productID: doc.id,
                 productUID: doc.data().productUID,
                 name: doc.data().name,
+                category: doc.data().category,
                 additionalData: doc.data().additionalData,
                 createdAt: doc.data().createdAt,
                 updatedAt: doc.data().updatedAt,
@@ -118,6 +177,7 @@ exports.postOneProduct = async (request, response) => {
         const newProductItem = {
             productUID: productUID,
             name: request.body.name ? request.body.name : null,
+            category: request.body.category ? request.body.category : null,
             additionalData: request.body.additionalData ? request.body.additionalData : [],
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -251,7 +311,8 @@ exports.editProduct = async ( request, response ) => {
     const res = request.body.name.toLowerCase().split(" ");
     const nameArr = res.filter(item=>{
         return item!="";
-    })
+    });
+
     const productUID = nameArr.join("-");
 
     updateItem.productUID = productUID;    
