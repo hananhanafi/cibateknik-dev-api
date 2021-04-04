@@ -14,7 +14,7 @@ app.post('/admin/login', loginAdmin);
 app.post('/admin/signup', signUpAdmin);
 
 
-const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword, getAllUsers} = require('./APIs/users');
+const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword, getAllUsers, getToken} = require('./APIs/users');
 //user
 app.post('/user/signup', signUpUser);
 app.post('/user/login', loginUser);
@@ -24,6 +24,7 @@ app.post('/user/image', auth, uploadProfilePhoto);
 app.get('/user', auth, getUserDetail);
 app.put('/user', auth, updateUserDetails);
 app.get('/users', auth, getAllUsers);
+app.get('/user/token', auth, getToken);
 
 //admin products
 const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');

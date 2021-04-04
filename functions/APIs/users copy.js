@@ -33,7 +33,7 @@ exports.loginUser = (request, response) => {
         })
 };
 
-exports.signUpUser = (request, response) => {
+exports.signUpUser = async (request, response) => {
     const newUser = {
         firstName: request.body.firstName,
         lastName: request.body.lastName,

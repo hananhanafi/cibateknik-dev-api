@@ -1,4 +1,5 @@
 const { admin, db, firebase } = require('../util/admin');
+const config = require('../util/config');
 const { createSubstringArray } = require('../util/helpers');
 
 const { validateLoginData, validateSignUpData } = require('../util/validators');
@@ -106,6 +107,21 @@ exports.getAllUsers = async (request, response) => {
     });
 };
 
+exports.getToken = (request, response) => {
+    const user = firebase.auth().currentUser;
+
+    if (user != null) {
+        user.getIdTokenResult(true).then(token => {
+          //handle token
+            return response.json({ token });
+        })
+        .catch((error) => {
+            console.error(error);
+            return response.status(403).json({ error:error,message: 'wrong credentials, please try again'});
+        })
+    }
+}
+
 
 // Login
 exports.loginUser = (request, response) => {
@@ -131,9 +147,11 @@ exports.loginUser = (request, response) => {
             console.log("DATUS",data.user.uid);
             
             db.collection('users').doc(`${data.user.uid}`).update({lastLogin:new Date()})
-            return data.user.getIdToken();
+            // return data.user.getIdToken(true);
+            return data.user.getIdTokenResult(true);
         })
         .then((token) => {
+            console.log("token",token);
             return response.json({ token });
         })
         .catch((error) => {
@@ -228,7 +246,7 @@ deleteImage = (imageName) => {
 }
 
 // Upload profile picture
-exports.uploadProfilePhoto = (request, response) => {
+exports.uploadProfilePhoto = async (request, response) => {
     const BusBoy = require('busboy');
 	const path = require('path');
 	const os = require('os');
@@ -238,16 +256,21 @@ exports.uploadProfilePhoto = (request, response) => {
 	let imageFileName;
 	let imageToBeUploaded = {};
 
-	busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
-		if (mimetype !== 'image/png' && mimetype !== 'image/jpeg') {
-			return response.status(400).json({ error: 'Wrong file type submited' });
-		}
-		const imageExtension = filename.split('.')[filename.split('.').length - 1];
-        imageFileName = `${request.user.uid}.${imageExtension}`;
-		const filePath = path.join(os.tmpdir(), imageFileName);
-		imageToBeUploaded = { filePath, mimetype };
-		file.pipe(fs.createWriteStream(filePath));
-    });
+    try {
+        await busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+            if (mimetype !== 'image/png' && mimetype !== 'image/jpeg') {
+                return response.status(400).json({ error: 'Wrong file type submited' });
+            }
+            const imageExtension = filename.split('.')[filename.split('.').length - 1];
+            imageFileName = `${request.user.uid}.${imageExtension}`;
+            const filePath = path.join(os.tmpdir(), imageFileName);
+            imageToBeUploaded = { filePath, mimetype };
+            file.pipe(fs.createWriteStream(filePath));
+        });
+    }catch (error){
+        return response.status(500).json({ general: 'Something went wrong, please try again' });
+    }
+
     deleteImage(imageFileName);
 	busboy.on('finish', () => {
 		admin
@@ -263,6 +286,7 @@ exports.uploadProfilePhoto = (request, response) => {
 			})
 			.then(() => {
 				const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${imageFileName}?alt=media`;
+
 				return db.doc(`/users/${request.user.uid}`).update({
 					imageUrl
 				});
@@ -272,7 +296,7 @@ exports.uploadProfilePhoto = (request, response) => {
 			})
 			.catch((error) => {
 				console.error(error);
-				return response.status(500).json({ error: error.code });
+				return response.status(500).json({ error: error });
 			});
 	});
 	busboy.end(request.rawBody);
@@ -333,8 +357,16 @@ exports.updateUserDetails = async (request, response) => {
     }
 
     document.update(updateItem)
-    .then(()=> {
-        response.json({message: 'Updated successfully'});
+    .then((data)=> {
+        // response.json({message: 'Updated successfully'});
+        return document.get();
+    })
+    .then((doc) => {
+        let userData = {};
+        if (doc.exists) {
+            userData.userCredentials = doc.data();
+            return response.json(userData);
+        }	
     })
     .catch((error) => {
         console.error(error);

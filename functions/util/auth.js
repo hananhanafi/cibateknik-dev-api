@@ -8,20 +8,30 @@ module.exports = (request, response, next) => {
 		console.error('No token found');
 		return response.status(403).json({ error: 'Unauthorized' });
 	}
+	let checkRevoked = true;
 	admin
 		.auth()
-		.verifyIdToken(idToken)
+		.verifyIdToken(idToken, checkRevoked)
 		.then((decodedToken) => {
 			request.user = decodedToken;
 			return db.collection('users').where('userID', '==', request.user.uid).limit(1).get();
 		})
 		.then((data) => {
 			// request.user.username = data.docs[0].data().username;
-			// request.user.imageUrl = data.docs[0].data().imageUrl;
+			request.user.imageUrl = data.docs[0].data().imageUrl;
 			return next();
 		})
-		.catch((err) => {
-			console.error('Error while verifying token', err);
-			return response.status(403).json(err);
+		.catch((error) => {
+			if (error.code == 'auth/id-token-expired') {
+			  // Token has been revoked. Inform the user to reauthenticate or signOut() the user.
+				return response.status(401).json(error);
+			} 
+			else if (error.code == 'auth/id-token-revoked') {
+			  // Token has been revoked. Inform the user to reauthenticate or signOut() the user.
+				return response.status(401).json(error);
+			} else {
+				console.error('Error while verifying token', error);
+				return response.status(403).json(error);
+			}
 		});
 };
