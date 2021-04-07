@@ -63,12 +63,24 @@ app.put('/category/:categoryID',auth_admin, editCategory);
 //end admin categories
 
 //admin items
-const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem } = require('./APIs/items');
-app.get('/items', getAllItems);
-app.get('/item/:itemID', getOneItem);
-app.post('/item',auth_admin, postOneItem);
-app.delete('/item/:itemID',auth_admin, deleteItem);
-app.put('/item/:itemID',auth_admin, editItem);
+const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem, updateMonthlyStock, updateStock } = require('./APIs/items');
+// app.get('/items', getAllItems);
+app.get('/product/:productID/items', getAllItems);
+// app.get('/item/:itemID', getOneItem);
+app.get('/product/:productID/item/:itemID', getOneItem);
+// app.post('/item',auth_admin, postOneItem);
+app.post('/product/:productID/item',auth_admin, postOneItem);
+// app.delete('/item/:itemID',auth_admin, deleteItem);
+app.delete('/product/:productID/item/:itemID',auth_admin, deleteItem);
+// app.put('/item/:itemID',auth_admin, editItem);
+app.put('/product/:productID/item/:itemID',auth_admin, editItem);
+
+app.post('/product/:productID/item/:itemID/stock/monthly',auth_admin, updateMonthlyStock);
+
+app.post('/product/:productID/item/:itemID/stock/update',auth_admin, updateStock);
+
+
+
 
 app.post('/item/post',auth_admin, updatePostedItem);
 app.delete('/item/post/delete',auth_admin, deletePostedItem);
