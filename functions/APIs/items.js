@@ -4,9 +4,24 @@ const { monthNames } = require('../util/constants');
 const { createSubstringArray } = require('../util/helpers');
 
 exports.getAllItems = async (request, response) => {
+    
+    const requestQuery = request.query;
+    
+    if (requestQuery.month == undefined || requestQuery.month.trim() === '') {
+        return response.status(400).json({ month: 'Must not be empty' });
+    }
+    if (requestQuery.year == undefined || requestQuery.year.trim() === '') {
+        return response.status(400).json({ year: 'Must not be empty' });
+    }
+    const month = parseInt(requestQuery.month);
+    const year = parseInt(requestQuery.year);
+    const search = requestQuery.search || '';
+    const order = requestQuery.order ? (requestQuery.order == 'asc' ? 'asc' : 'desc') : null;
     let items = {
         product:null,
         items:[],
+        items_monthly_stock: [],
+        items_daily_stock: [],
     };
 
     const docRef = db.collection('products').doc(request.params.productID)
@@ -22,33 +37,114 @@ exports.getAllItems = async (request, response) => {
         return response.status(500).json({ error: err});
     });
 
-    await docRef.collection('items')
-    .orderBy('name')
+    try {
+        if(search){
+            await db.collection('products').doc(request.params.productID).collection('items')
+            .orderBy(order ? 'createdAt' : 'name', order ? order : 'asc')
+            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            .get()
+            .then((data) => {
+                data.forEach((doc) => {
+                    const data = doc.data();
+                    delete data.searchKeywordsArray;
+                    let currentID = doc.id
+                    let appObj = { ...data, ['id']: currentID }
+                    
+                    items.items.push(appObj)
+                });
+            })
+            .catch((err) => {
+                console.error(err);
+                return response.status(500).json({ error: err});
+            });
+
+        }else {
+            await docRef.collection('items')
+            .orderBy(order ? 'createdAt' : 'name', order ? order : 'asc')
+            .get()
+            .then((data) => {
+                data.forEach((doc) => {
+                    const data = doc.data();
+                    delete data.searchKeywordsArray;
+                    let currentID = doc.id
+                    let appObj = { ...data, ['id']: currentID }
+                    
+                    items.items.push(appObj)
+                });
+            })
+            .catch((err) => {
+                console.error(err);
+                return response.status(500).json({ error: err});
+            });
+
+        }
+    } catch (error) {
+        console.error(error);
+        return response.status(500).json({ error: error });
+    }
+
+    await docRef.collection('items_monthly_stock')
+    .where('month','==',month)
+    .where('year','==',year)
     .get()
     .then((data) => {
         data.forEach((doc) => {
             const data = doc.data();
-            delete data.searchKeywordsArray;
             let currentID = doc.id
             let appObj = { ...data, ['id']: currentID }
             
-            items.items.push(appObj)
+            items.items_monthly_stock.push(appObj)
         });
     })
     .catch((err) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
+    
+    
+    await docRef.collection('items_daily_stock')
+    .where('month','==',month)
+    .where('year','==',year)
+    .get()
+    .then((data) => {
+        data.forEach((doc) => {
+            const data = doc.data();
+            let currentID = doc.id
+            let appObj = { ...data, ['id']: currentID }
+            
+            items.items_daily_stock.push(appObj)
+        });
+    })
+    .catch((err) => {
+        console.error(err);
+        return response.status(500).json({ error: err});
+    });
+    
         
-    return response.json({items,message: 'Succed'});
+    return response.json({data:items,message: 'Succed'});
 };
 
 
 
 exports.getOneItem = async (request, response) => {
     
-    let itemData = null;
-    const docRef = db.collection('products').doc(request.params.productID)
+    // let itemData = null;
+    let itemData = {
+        product: null,
+        item: null,
+    };
+    const docRef = db.collection('products').doc(request.params.productID);
+    
+    await docRef.get()
+    .then(doc=>{
+        const data = doc.data();
+        delete data.searchKeywordsArray;
+        itemData.product = data;
+    })
+    .catch((err) => {
+        console.error(err);
+        return response.status(500).json({ error: err});
+    });
 
     await docRef.collection('items').doc(request.params.itemID)
     .get()
@@ -61,7 +157,7 @@ exports.getOneItem = async (request, response) => {
             const data = doc.data();
             delete data.searchKeywordsArray;
             id = doc.id;
-            itemData = {...data,id};
+            itemData.item = {...data,id};
             return response.json(itemData);
 
         }	
@@ -72,152 +168,6 @@ exports.getOneItem = async (request, response) => {
     });
         
 };
-
-// exports.postOneItem = async (request, response) => {
-
-//     try {
-
-//         const date = new Date();
-        
-//         const ids = {
-//             productID: request.body.productID,
-//             brandID: request.body.brandID,
-//             supplierID: request.body.supplierID,
-//         }
-        
-//         const newItem = {
-//             ...ids,
-//             name: request.body.name,
-//             stock: request.body.stock,
-//             minimumStock: request.body.minimumStock,
-//             price: request.body.price,
-//             note: request.body.note,
-//             createdAt: date,
-//             updatedAt: date,
-//             additionalData: request.body.additionalData
-//         }
-
-        
-//         //check if new item valid
-//         const { valid, errors } = validateEmptyData(newItem);
-//         if (!valid) return response.status(400).json(errors);
-
-//         await db.doc(`/products/${newItem.productID}`)
-//         .get()
-//         .then((doc)=>{
-//             if(!doc.exists){
-//                 return response.status(404).json({ error: 'Product not found' })
-//             }
-//         })
-
-//         await db.doc(`/brands/${newItem.brandID}`)
-//         .get()
-//         .then((doc)=>{
-//             if(!doc.exists){
-//                 return response.status(404).json({ error: 'Brand not found' })
-//             }
-//         })
-        
-//         await db.doc(`/suppliers/${newItem.supplierID}`)
-//         .get()
-//         .then((doc)=>{
-//             if(!doc.exists){
-//                 return response.status(404).json({ error: 'Supplier not found' })
-//             }
-//         })
-//         //end check if new item valid
-        
-        
-//         const res = request.body.name.toLowerCase().split(" ");
-//         const itemIDArr = res.filter(item=>{
-//             return item!="";
-//         })
-
-//         const itemID = itemIDArr.join("-");
-
-//         //check if item alread exists
-//         await db.doc(`/items/${itemID}`)
-//         .get()
-//         .then((doc)=>{
-//             if(doc.exists){
-//                 return response.status(404).json({ error: 'Item already exists' })
-//             }
-//         })
-        
-
-//         const newMonthlyItem = {
-//             ...ids,
-//             itemID : itemID,
-//             startStock : newItem.stock,
-//             endStock: newItem.stock,
-//             year: date.getFullYear(),
-//             month: monthNames[date.getMonth()],
-//             createdAt: date,
-//             updatedAt: date,
-//         }
-
-//         const newDailyItem = {
-//             ...ids,
-//             itemID : itemID,
-//             in : newItem.stock,
-//             out : 0,
-//             year : date.getFullYear(),
-//             month : monthNames[date.getMonth()],
-//             date : date.getDate(),
-//             createdAt: date,
-//             updatedAt: date,
-//         }
-        
-//         //create item monthly and daily stock id
-//         itemMonthlyId = itemID + "_" + newMonthlyItem.year + "_" + newMonthlyItem.month;
-//         itemDailyId = itemID + "_" + date.toISOString();
-
-//         db
-//         .collection('items')
-//         .doc(itemID)
-//         .set(newItem)
-//         .then((doc)=>{
-//             const responseItem = newItem;
-//             responseItem.id = doc.id;
-//             return responseItem;
-//         })
-//         .then(async (responseItem)=>{
-            
-//             await db.collection('items_monthly_stock').doc(itemMonthlyId)
-//             .set(newMonthlyItem)
-//             .then((doc)=>{
-//                 responseItem.monthlyStock = {id:doc.id,...newMonthlyItem};
-//             })
-//             .catch((err) => {
-//                 response.status(500).json({ error: err });
-//                 console.error(err);
-//             });
-
-//             await db.collection('items_daily_stock').doc(itemDailyId)
-//             .set(newDailyItem)
-//             .then((doc)=>{
-//                 responseItem.dailyStock =  {id:doc.id,...newDailyItem};
-//             })
-//             .catch((err) => {
-//                 response.status(500).json({ error: err });
-//                 console.error(err);
-//             });
-
-//             return response.json(responseItem);
-
-
-//         })
-//         .catch((err) => {
-// 			response.status(500).json({ error: err });
-// 			console.error(err);
-// 		});
-
-//     } catch (error) {
-//         console.error(error);
-//         return response.status(500).json({ error: error });
-//     }
-// };
-
 
 exports.postOneItem = async (request, response) => {
 
@@ -355,13 +305,13 @@ exports.updateStock = async (request, response) => {
     const dateNow = new Date();
     const requestBody = request.body;
 
-    if (requestBody.date == undefined || requestBody.date.trim() === '') {
+    if (requestBody.date == undefined || requestBody.date === '') {
         return response.status(400).json({ date: 'Must not be empty' });
     }
-    if (requestBody.month == undefined || requestBody.month.trim() === '') {
+    if (requestBody.month == undefined || requestBody.month === '') {
         return response.status(400).json({ month: 'Must not be empty' });
     }
-    if (requestBody.year == undefined || requestBody.year.trim() === '') {
+    if (requestBody.year == undefined || requestBody.year === '') {
         return response.status(400).json({ year: 'Must not be empty' });
     }
     
@@ -512,16 +462,19 @@ exports.updateStock = async (request, response) => {
         }
 
         let updateHistoryItem = {
+            note: requestBody.note,
             type: 'stock update',
-            itemID: request.params.itemID,
-            date: date,
-            month: month,
-            month_name:monthNames[month-1],
-            year: year,
-            in: currentStock.dailyIn + requestStockIn,
-            out: currentStock.dailyOut + requestStockOut,
             createdAt: dateNow,
             updatedAt: dateNow,
+            data: {
+                itemID: request.params.itemID,
+                date: date,
+                month: month,
+                month_name:monthNames[month-1],
+                year: year,
+                in: currentStock.dailyIn + requestStockIn,
+                out: currentStock.dailyOut + requestStockOut,
+            }
             
         }
         

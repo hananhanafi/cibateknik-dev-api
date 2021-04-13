@@ -6,52 +6,86 @@ exports.getAllProducts = async (request, response) => {
     const queryRequest = request.query;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
-    const category = queryRequest.category ? queryRequest.category : null;
     const limit = queryRequest.limit ? queryRequest.limit : 10;
+
+    let filterCounter = [];
+
+    if(queryRequest.category){
+        filterCounter.push({
+            name: 'category',
+            value: queryRequest.category
+        });
+    }
+    if(queryRequest.brand){
+        filterCounter.push({
+            name: 'brand',
+            value: queryRequest.brand
+        });
+    }
+    if(queryRequest.supplier){
+        filterCounter.push({
+            name: 'supplier',
+            value: queryRequest.supplier
+        });
+    }
 
     //query get all data for counting total data
     let queryGetAll = db.collection('products').orderBy('createdAt', order);
-    console.log("queryRequest",queryRequest);
-    console.log("category",category);
     //query get limited data for pagination
     let queryGetData = db.collection('products')
     .orderBy('createdAt', order)
     .limit(limit);
 
-    if(search && category){
-        queryGetAll = db.collection('products')
-        .orderBy('createdAt', order)
-        .where('category.id','==', category)
-        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-
-        queryGetData = db.collection('products')
-        .orderBy('createdAt', order)
-        .where('category.id','==', category)
-        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-        .limit(limit);
-
-    }
-    else if(search){
-        queryGetAll = db.collection('products')
-        .orderBy('createdAt', order)
-        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-
-        queryGetData = db.collection('products')
-        .orderBy('createdAt', order)
-        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-        .limit(limit);
-        
-    }
-    else if(category) {
-        queryGetAll = db.collection('products')
-        .orderBy('createdAt', order)
-        .where('category.id','==', category)
-
-        queryGetData = db.collection('products')
-        .orderBy('createdAt', order)
-        .where('category.id','==', category)
-        .limit(limit);
-
+    if(search){
+        if(filterCounter.length > 0){
+            if(filterCounter.length==1){
+                queryGetAll = db.collection('products')
+                .orderBy('createdAt', order)
+                .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            }
+            else if(filterCounter.length==2){
+                queryGetAll = db.collection('products')
+                .orderBy('createdAt', order)
+                .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            }
+            else if(filterCounter.length==3){
+                queryGetAll = db.collection('products')
+                .orderBy('createdAt', order)
+                .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                .where(`${filterCounter[2].name}.id`,'==', filterCounter[2].value)
+                .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            }
+        }
+        else {
+            queryGetAll = db.collection('products')
+            .orderBy('createdAt', order)
+            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+        }
+    }else{
+        if(filterCounter.length > 0){
+            if(filterCounter.length==1){
+                queryGetAll = db.collection('products')
+                .orderBy('createdAt', order)
+                .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+            }
+            else if(filterCounter.length==2){
+                queryGetAll = db.collection('products')
+                .orderBy('createdAt', order)
+                .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+            }
+            else if(filterCounter.length==3){
+                queryGetAll = db.collection('products')
+                .orderBy('createdAt', order)
+                .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                .where(`${filterCounter[2].name}.id`,'==', filterCounter[2].value)
+            }
+        }
     }
 
     const snapshot = await queryGetAll.get();
@@ -66,66 +100,176 @@ exports.getAllProducts = async (request, response) => {
 
     
     if(current_page>1){
-        if(search & category){
-            const first = db.collection('products')
-            .where('category.id','==', category)
-            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
-            .limit((limit*current_page)-limit);
-            const snapshotFirst = await first.get();
-            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
 
-            queryGetData = db.collection('products')
-            .where('category.id','==', category)
-            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
-            .startAfter(last.data().createdAt)
-            .limit(limit)
+        if(search){
+            if(filterCounter.length > 0){
+                if(filterCounter.length==1){
+                    const first = db.collection('products')
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                    .orderBy('createdAt', order)
+                    .limit((limit*current_page)-limit);
+                    const snapshotFirst = await first.get();
+                    const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+    
+                    queryGetData = db.collection('products')
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                    .orderBy('createdAt', order)
+                    .startAfter(last.data().createdAt)
+                    .limit(limit)
+                }
+                else if(filterCounter.length==2){
+                    const first = db.collection('products')
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                    .orderBy('createdAt', order)
+                    .limit((limit*current_page)-limit);
+                    const snapshotFirst = await first.get();
+                    const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+    
+                    queryGetData = db.collection('products')
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                    .orderBy('createdAt', order)
+                    .startAfter(last.data().createdAt)
+                    .limit(limit)
+                }
+                else if(filterCounter.length==3){
+                    const first = db.collection('products')
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .where(`${filterCounter[2].name}.id`,'==', filterCounter[2].value)
+                    .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                    .orderBy('createdAt', order)
+                    .limit((limit*current_page)-limit);
+                    const snapshotFirst = await first.get();
+                    const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+    
+                    queryGetData = db.collection('products')
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .where(`${filterCounter[2].name}.id`,'==', filterCounter[2].value)
+                    .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                    .orderBy('createdAt', order)
+                    .startAfter(last.data().createdAt)
+                    .limit(limit)
+                }
+            }else {
+                const first = db.collection('products')
+                .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                .orderBy('createdAt', order)
+                .limit((limit*current_page)-limit);
+                const snapshotFirst = await first.get();
+                const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
 
-        }
-        else if(search){
-            const first = db.collection('products')
-            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
-            .limit((limit*current_page)-limit);
-            const snapshotFirst = await first.get();
-            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
-
-            queryGetData = db.collection('products')
-            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
-            .startAfter(last.data().createdAt)
-            .limit(limit)
-        }
-        else if(category){
-            const first = db.collection('products')
-            .where('category.id','==', category)
-            .orderBy('createdAt', order)
-            .limit((limit*current_page)-limit);
-            const snapshotFirst = await first.get();
-            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
-
-            queryGetData = db.collection('products')
-            .where('category.id','==', category)
-            .orderBy('createdAt', order)
-            .startAfter(last.data().createdAt)
-            .limit(limit)
+                queryGetData = db.collection('products')
+                .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                .orderBy('createdAt', order)
+                .startAfter(last.data().createdAt)
+                .limit(limit)
+            }
         }else{
-            const first = db.collection('products')
-            .orderBy('createdAt', order)
-            .limit((limit*current_page)-limit);
-            const snapshotFirst = await first.get();
-            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
-            
-            queryGetData = db.collection('products')
-            .orderBy('createdAt', order)
-            .startAfter(last.data().createdAt)
-            .limit(limit)
+            if(filterCounter.length > 0){
+                if(filterCounter.length==1){
+                    queryGetData = db.collection('products')
+                    .orderBy('createdAt', order)
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .limit(limit);
+                }
+                else if(filterCounter.length==2){
+                    queryGetData = db.collection('products')
+                    .orderBy('createdAt', order)
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .limit(limit);
+                }
+                else if(filterCounter.length==3){
+                    queryGetData = db.collection('products')
+                    .orderBy('createdAt', order)
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .where(`${filterCounter[2].name}.id`,'==', filterCounter[2].value)
+                    .limit(limit);
+                }
+            }else {
+                const first = db.collection('products')
+                .orderBy('createdAt', order)
+                .limit((limit*current_page)-limit);
+                const snapshotFirst = await first.get();
+                const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+                
+                queryGetData = db.collection('products')
+                .orderBy('createdAt', order)
+                .startAfter(last.data().createdAt)
+                .limit(limit)
+            }
         }
 
         const snapshot = await queryGetData.get();
         first_index = ((limit*current_page)-(limit-1));
         last_index = first_index + snapshot.docs.length-1;
+    }
+    else {
+        if(search){
+            if(filterCounter.length > 0){
+                if(filterCounter.length==1){
+                        queryGetData = db.collection('products')
+                        .orderBy('createdAt', order)
+                        .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                        .limit(limit);
+                }
+                else if(filterCounter.length==2){
+                    queryGetData = db.collection('products')
+                    .orderBy('createdAt', order)
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                    .limit(limit);
+                }
+                else if(filterCounter.length==3){
+                    queryGetData = db.collection('products')
+                    .orderBy('createdAt', order)
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .where(`${filterCounter[2].name}.id`,'==', filterCounter[2].value)
+                    .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                    .limit(limit);
+                }
+            }else {
+                queryGetData = db.collection('products')
+                .orderBy('createdAt', order)
+                .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+                .limit(limit);
+            }
+        }else{
+            if(filterCounter.length > 0){
+                if(filterCounter.length==1){
+                    queryGetData = db.collection('products')
+                    .orderBy('createdAt', order)
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .limit(limit);
+                }
+                else if(filterCounter.length==2){
+                    queryGetData = db.collection('products')
+                    .orderBy('createdAt', order)
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .limit(limit);
+                }
+                else if(filterCounter.length==3){
+                    queryGetData = db.collection('products')
+                    .orderBy('createdAt', order)
+                    .where(`${filterCounter[0].name}.id`,'==', filterCounter[0].value)
+                    .where(`${filterCounter[1].name}.id`,'==', filterCounter[1].value)
+                    .where(`${filterCounter[2].name}.id`,'==', filterCounter[2].value)
+                    .limit(limit);
+                }
+            }
+        }
     }
 
     queryGetData.get()
@@ -147,6 +291,8 @@ exports.getAllProducts = async (request, response) => {
                 productUID: doc.data().productUID,
                 name: doc.data().name,
                 category: doc.data().category,
+                brand: doc.data().brand,
+                supplier: doc.data().supplier,
                 additionalData: doc.data().additionalData,
                 createdAt: doc.data().createdAt,
                 updatedAt: doc.data().updatedAt,
@@ -178,6 +324,8 @@ exports.postOneProduct = async (request, response) => {
             productUID: productUID,
             name: request.body.name ? request.body.name : null,
             category: request.body.category ? request.body.category : null,
+            supplier: request.body.supplier ? request.body.supplier : null,
+            brand: request.body.brand ? request.body.brand : null,
             additionalData: request.body.additionalData ? request.body.additionalData : [],
             createdAt: new Date(),
             updatedAt: new Date(),
