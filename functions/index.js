@@ -1,9 +1,12 @@
 const functions = require('firebase-functions');
-const app = require('express')();
+// const app = require('express')();
 const cors = require('cors');
 const auth = require('./util/auth');
 const auth_admin = require('./util/auth_admin');
-
+const express = require("express");
+const app = express();
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 // Automatically allow cross-origin requests
 app.use(cors({ origin: true }));
@@ -63,13 +66,15 @@ app.put('/category/:categoryID',auth_admin, editCategory);
 //end admin categories
 
 //admin items
-const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem, updateMonthlyStock, updateStock } = require('./APIs/items');
+const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem, updateMonthlyStock, updateStock, uploadImage, deleteItemImage } = require('./APIs/items');
 // app.get('/items', getAllItems);
 app.get('/product/:productID/items', getAllItems);
 // app.get('/item/:itemID', getOneItem);
 app.get('/product/:productID/item/:itemID', getOneItem);
 // app.post('/item',auth_admin, postOneItem);
 app.post('/product/:productID/item',auth_admin, postOneItem);
+app.post('/product/:productID/item/:itemID/images',auth_admin, uploadImage);
+app.post('/product/:productID/item/:itemID/images/delete',auth_admin, deleteItemImage);
 // app.delete('/item/:itemID',auth_admin, deleteItem);
 app.delete('/product/:productID/item/:itemID',auth_admin, deleteItem);
 // app.put('/item/:itemID',auth_admin, editItem);

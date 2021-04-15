@@ -1,4 +1,5 @@
-const { db } = require('../util/admin');
+const { admin,db, fieldValue } = require('../util/admin');
+const config = require('../util/config');
 const { validateEmptyData } = require('../util/validators');
 const { monthNames } = require('../util/constants');
 const { createSubstringArray } = require('../util/helpers');
@@ -119,22 +120,16 @@ exports.getAllItems = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-    
         
     return response.json({data:items,message: 'Succed'});
 };
 
-
-
 exports.getOneItem = async (request, response) => {
-    
-    // let itemData = null;
     let itemData = {
         product: null,
         item: null,
     };
     const docRef = db.collection('products').doc(request.params.productID);
-    
     await docRef.get()
     .then(doc=>{
         const data = doc.data();
@@ -150,7 +145,7 @@ exports.getOneItem = async (request, response) => {
     .get()
     .then((doc) => {
         if (!doc.exists) {
-            return response.status(404).json({ error: 'Item not found' })
+            return response.status(404).json({ error: 'Barang tidak ditemukan' })
         }
         
         if (doc.exists) {
@@ -172,15 +167,11 @@ exports.getOneItem = async (request, response) => {
 exports.postOneItem = async (request, response) => {
 
     try {
-
         const date = new Date();
         
         const ids = {
             productID: request.params.productID,
-            brandID: request.body.brandID,
-            supplierID: request.body.supplierID,
         }
-        
         const newItem = {
             ...ids,
             name: request.body.name,
@@ -192,8 +183,6 @@ exports.postOneItem = async (request, response) => {
             updatedAt: date,
             additionalData: request.body.additionalData
         }
-
-        
         //check if new item valid
         const { valid, errors } = validateEmptyData(newItem);
         if (!valid) return response.status(400).json(errors);
@@ -202,32 +191,13 @@ exports.postOneItem = async (request, response) => {
         .get()
         .then((doc)=>{
             if(!doc.exists){
-                return response.status(404).json({ error: 'Product not found' })
-            }
-        })
-
-        await db.doc(`/brands/${newItem.brandID}`)
-        .get()
-        .then((doc)=>{
-            if(!doc.exists){
-                return response.status(404).json({ error: 'Brand not found' })
-            }
-        })
-        
-        await db.doc(`/suppliers/${newItem.supplierID}`)
-        .get()
-        .then((doc)=>{
-            if(!doc.exists){
-                return response.status(404).json({ error: 'Supplier not found' })
+                return response.status(404).json({ message: 'Product not found' })
             }
         })
         //end check if new item valid
-
-        
         
         const searchKeywordsArray = await createSubstringArray(newItem.name);
         newItem.searchKeywordsArray = searchKeywordsArray;
-        
         
         const res = request.body.name.toLowerCase().split(" ");
         const itemUIDArr = res.filter(item=>{
@@ -237,7 +207,6 @@ exports.postOneItem = async (request, response) => {
         const itemUID = itemUIDArr.join("-");
         newItem.itemUID = itemUID;
         
-
         //check if item alread exists
         // await db.doc(`/products/${newItem.productID}/items`)
         const itemFound = await db
@@ -286,19 +255,277 @@ exports.postOneItem = async (request, response) => {
                 return response.json(responseItem);
             })
             .catch((err) => {
-                response.status(500).json({ error: err });
+                response.status(500).json({ error: err,message:err });
                 console.error(err);
             });
         }else{
-            return response.status(400).json({ product: 'Barang ' + newItem.name + ' sudah ada' });
+            return response.status(400).json({ message: 'Barang dengan nama ' + newItem.name + ' sudah ada' });
         }
-        
-        
 
     } catch (error) {
         console.error(error);
-        return response.status(500).json({ error: error });
+        return response.status(500).json({ message: error });
     }
+};
+
+exports.uploadImage = (request, response) => {
+    const BusBoy = require('busboy');
+    const path = require('path');
+    const os = require('os');
+    const fs = require('fs');
+
+    let fields = {};
+
+    const busboy = new BusBoy({ headers: request.headers });
+
+    let imageFileName = {};
+    let imagesToUpload = [];
+    let imageToAdd = {};
+    let imagesItem = [];
+
+    busboy.on('field', (fieldname, fieldvalue) => {
+        fields[fieldname] = fieldvalue;
+    });
+
+    busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+        if (mimetype !== 'image/jpeg' && mimetype !== 'image/png') {
+            return res
+                .status(400)
+                .json({ error: 'Wrong file type submitted!' });
+        }
+
+        // Getting extension of any image
+        const imageExtension = filename.split('.')[
+            filename.split('.').length - 1
+        ];
+
+        // Setting filename
+        imageFileName = request.params.productID + "-" + request.params.itemID + "-" + `${Math.round(Math.random() * 1000000000)}.${imageExtension}`;
+
+        // Creating path
+        const filepath = path.join(os.tmpdir(), imageFileName);
+        imageToAdd = {
+            imageFileName,
+            filepath,
+            mimetype,
+        };
+
+        file.pipe(fs.createWriteStream(filepath));
+        //Add the image to the array
+        imagesToUpload.push(imageToAdd);
+    });
+
+    busboy.on('finish', async () => {
+        let promises = [];
+
+        imagesToUpload.forEach((imageToBeUploaded) => {
+            const image = {
+                imageUrl : `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${imageToBeUploaded.imageFileName}?alt=media`,
+                imageName : imageToBeUploaded.imageFileName
+            }
+            imagesItem.push(image);
+            
+            promises.push(
+                admin
+                    .storage()
+                    .bucket()
+                    .upload(imageToBeUploaded.filepath, {
+                        resumable: false,
+                        metadata: {
+                            metadata: {
+                                contentType: imageToBeUploaded.mimetype,
+                            },
+                        },
+                    })
+            );
+        });
+
+        try {
+            await Promise.all(promises);
+            
+            const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
+            documentItem.update({
+                imagesItem
+            });
+            
+            return response.json({
+                message: `Images URL: ${imagesItem}`,
+            });
+            
+        } catch (err) {
+            console.log(err);
+            response.status(500).json(err);
+        }
+    });
+
+    busboy.end(request.rawBody);
+};
+
+deleteImage = (imageName) => {
+    const bucket = admin.storage().bucket();
+    const path = `${imageName}`
+    return bucket.file(path).delete()
+    .then(() => {
+        return
+    })
+    .catch((error) => {
+        return
+    })
+}
+exports.deleteItemImage = async (request, response) => {
+    const deleted_images = request.body.deleted_images;
+    const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
+
+    const promises = [];
+
+    deleted_images.forEach(function(image){
+        promises.push(
+            deleteImage(image.imageName)
+        )
+    });
+
+    try {
+        await Promise.all(promises);
+        documentItem.update("imagesItem",fieldValue.arrayRemove(...deleted_images));
+        return response.json({ message: 'Image deleted successfully' });
+    }catch (err) {
+        return response.status(404).json({ error: err });
+    }
+};
+
+
+exports.editItem = async ( request, response ) => { 
+    let updateItem = Object.fromEntries(
+        Object.entries(request.body).filter(([key, value]) => value != null) );
+    
+    updateItem.updatedAt = new Date();
+
+    if (request.body.name == undefined || request.body.name.trim() === '') {
+        return response.status(400).json({ name: 'Must not be empty' });
+    }
+    if(!request.params.itemID){
+        response.status(403).json({message: 'Not allowed to edit'});
+    }
+
+    let document = db.collection('products').doc(`${request.params.productID}`).collection('items').doc(`${request.params.itemID}`);
+
+    document.get()
+    .then(async (doc)=>{
+        if (!doc.exists) {
+            return response.status(404).json({ error: 'Barang tidak ditemukan' })
+        }
+        
+        if(doc.data().name!=updateItem.name){
+            //check if product already exixsts
+            const productsRef = db.collection('products');
+            const item = await productsRef.doc(`${request.params.productID}`).collection('items').doc(`${request.params.itemID}`).where('name', '==', updateItem.name).limit(1).get();
+            if(!item.empty){
+                return response.status(400).json({ item: 'Barang ' + updateItem.name + ' sudah ada' });
+            }
+
+        }
+
+    })
+    .catch((err) => {
+        return response.status(500).json({ error: 'server error' })
+    });
+    
+    const res = updateItem.name.toLowerCase().split(" ");
+    const nameArr = res.filter(item=>{
+        return item!="";
+    });
+    const itemUID = nameArr.join("-");
+    updateItem.itemUID = itemUID;    
+    const searchKeywordsArray = await createSubstringArray(updateItem.name);
+    updateItem.searchKeywordsArray = searchKeywordsArray;
+
+    document.update(updateItem)
+    .then(()=> {
+        response.json({message: 'Updated successfully'});
+    })
+    .catch((err) => {
+        console.error(err);
+        return response.status(500).json({ 
+                error: err.code 
+        });
+    });
+};
+
+exports.deleteItem = async (request, response) => {
+    
+    try {
+        console.log("daily");
+        const queryItemDailyStock = await db.collection('products').doc(request.params.productID).collection('items_daily_stock').where('itemID','==',request.params.itemID);
+        await queryItemDailyStock.get().then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+                doc.ref.delete();
+                });
+            })
+            .catch((err) => {
+                console.error(err);
+                return response.status(500).json({ error: err.code,message: 'Server error' });
+            });
+        console.log("daily done");
+    }catch (err) {
+        return response.status(404).json({ error: err });
+    }
+
+    try {
+        console.log("monthly");
+        const queryItemMonthlyStock = await db.collection('products').doc(request.params.productID).collection('items_monthly_stock').where('itemID','==',request.params.itemID);
+        await queryItemMonthlyStock.get().then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+                doc.ref.delete();
+                });
+            })
+            .catch((err) => {
+                console.error(err);
+                return response.status(500).json({ error: err.code,message: 'Server error' });
+            });
+        console.log("monthly done");
+    }catch (err) {
+        return response.status(404).json({ error: err });
+    }
+    
+        const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
+        await documentItem
+            .get()
+            .then(async (doc) => {
+                if (!doc.exists) {
+                    return response.status(404).json({ error: 'Barang tidak ditemukans' })
+                }
+                if(doc.data().imagesItem){
+                    const deleted_images = doc.data().imagesItem;
+                
+                    const promises = [];
+                
+                    deleted_images.forEach(function(image){
+                        promises.push(
+                            deleteImage(image.imageName)
+                        )
+                    });
+                    try {
+                        await Promise.all(promises);
+
+                        return documentItem.delete();
+                    }catch (err) {
+                        return response.status(404).json({ error: err });
+                    }
+
+                }else {
+                    return documentItem.delete();
+                }
+
+            })
+            .then(() => {
+                response.json({ message: 'Delete successfull' });
+            })
+            .catch((err) => {
+                console.error(err);
+                return response.status(500).json({ error: err.code,message: 'Server error' });
+            });
+    
+ 
 };
 
 exports.updateStock = async (request, response) => {
@@ -344,7 +571,7 @@ exports.updateStock = async (request, response) => {
     .get()
     .then((doc)=>{
         if (!doc.exists) {
-            return response.status(404).json({ error: 'Item not found' })
+            return response.status(404).json({ error: 'Barang tidak ditemukan' })
         }else{
             const data= doc.data();
             currentStock.itemTotal = data.stock;
@@ -355,7 +582,7 @@ exports.updateStock = async (request, response) => {
     .get()
     .then(async(doc) => {
         if (!doc.exists) {
-            // return response.status(404).json({ error: 'Item not found' })
+            // return response.status(404).json({ error: 'Barang tidak ditemukan' })
 
             try{
                 const newDailyStock = {
@@ -400,7 +627,7 @@ exports.updateStock = async (request, response) => {
         .get()
         .then(async(doc) => {
             if (!doc.exists) {
-                // return response.status(404).json({ error: 'Item not found' })
+                // return response.status(404).json({ error: 'Barang tidak ditemukan' })
 
                 try{
                     const newMonthlyStock = {
@@ -529,8 +756,6 @@ exports.updateStock = async (request, response) => {
     }
 }
 
-
-
 exports.updateMonthlyStock = async (request, response) => {
     const date = new Date();
 
@@ -569,7 +794,7 @@ exports.updateMonthlyStock = async (request, response) => {
     .get()
     .then((doc)=>{
         if (!doc.exists) {
-            return response.status(404).json({ error: 'Item not found' })
+            return response.status(404).json({ error: 'Barang tidak ditemukan' })
         }else{
             const data= doc.data();
             currentStock.itemTotal = data.stock;
@@ -581,7 +806,7 @@ exports.updateMonthlyStock = async (request, response) => {
         .get()
         .then(async(doc) => {
             if (!doc.exists) {
-                // return response.status(404).json({ error: 'Item not found' })
+                // return response.status(404).json({ error: 'Barang tidak ditemukan' })
 
                 try{
                     const month = requestBody.month;
@@ -669,66 +894,6 @@ exports.updateMonthlyStock = async (request, response) => {
         
 };
 
-
-
-exports.deleteItem = (request, response) => {
-    const document = db.doc(`/products/${request.params.productID}/item/${request.params.itemID}`);
-    document
-        .get()
-        .then((doc) => {
-            if (!doc.exists) {
-                return response.status(404).json({ error: 'Item not found' })
-            }
-            return document.delete();
-        })
-        .then(() => {
-            response.json({ message: 'Delete successfull' });
-        })
-        .catch((err) => {
-            console.error(err);
-            return response.status(500).json({ error: err.code });
-        });
-};
-
-exports.editItem = ( request, response ) => { 
-    // const obj2 = Object.map(obj1, (k,v) => v + 5);
-    // var filtered = Object.filter(scores, score => score > 1); 
-    let updateItem = Object.fromEntries(
-        Object.entries(request.body).filter(([key, value]) => value != null) );
-    
-    updateItem.updatedAt = new Date();
-
-    if (request.body.name == undefined || request.body.name.trim() === '') {
-        return response.status(400).json({ name: 'Must not be empty' });
-    }
-    if(!request.params.itemID){
-        response.status(403).json({message: 'Not allowed to edit'});
-    }
-    let document = db.collection('products').doc(`${request.params.productID}`).collection('items').doc(`${request.params.itemID}`);
-
-    document.get()
-    .then((doc)=>{
-        if (!doc.exists) {
-            return response.status(404).json({ error: 'Item not found' })
-        }
-    })
-    .catch((err) => {
-        return response.status(404).json({ error: 'Item not found' })
-    });
-
-    document.update(updateItem)
-    .then(()=> {
-        response.json({message: 'Updated successfully'});
-    })
-    .catch((err) => {
-        console.error(err);
-        return response.status(500).json({ 
-                error: err.code 
-        });
-    });
-};
-
-
 exports.updatePostedItem = async (request, response) => {
     try {
         
@@ -741,7 +906,7 @@ exports.updatePostedItem = async (request, response) => {
             await db
             .doc(`/items/${item}`).get().then((doc)=>{
                 if (!doc.exists) {
-                    return response.status(404).json({ item: 'Item not found' })
+                    return response.status(404).json({ item: 'Barang tidak ditemukan' })
                 }else{
                     itemID = doc.id;
                     itemData = doc.data();
@@ -754,7 +919,6 @@ exports.updatePostedItem = async (request, response) => {
                 console.error(error);
                 return response.status(500).json({ error: error });
             })
-
             
             await db
             .collection('items_posted')
@@ -780,7 +944,6 @@ exports.updatePostedItem = async (request, response) => {
     return response.status(200).json({"message":"Berhasil menambahkan item pada katalog"});
 };
 
-
 exports.deletePostedItem = async (request, response) => {
     try {
         
@@ -792,7 +955,7 @@ exports.deletePostedItem = async (request, response) => {
                 .get()
                 .then((doc) => {
                     if (!doc.exists) {
-                        return response.status(404).json({ error: 'Item not found' })
+                        return response.status(404).json({ error: 'Barang tidak ditemukan' })
                     }
                     document.delete();
                 })
@@ -812,7 +975,6 @@ exports.deletePostedItem = async (request, response) => {
     return response.status(200).json({"message":"Berhasil menghapus item"});
 };
 
-
 exports.updateSoldItem = async (request, response) => {
     try {
         
@@ -825,7 +987,7 @@ exports.updateSoldItem = async (request, response) => {
             await db
             .doc(`/items/${item}`).get().then((doc)=>{
                 if (!doc.exists) {
-                    return response.status(404).json({ item: 'Item not found' })
+                    return response.status(404).json({ item: 'Barang tidak ditemukan' })
                 }else{
                     itemID = doc.id;
                     itemData = doc.data();
@@ -864,7 +1026,6 @@ exports.updateSoldItem = async (request, response) => {
     return response.status(200).json({"message":"Berhasil sold item"});
 };
 
-
 exports.deleteSoldItem = async (request, response) => {
     try {
         
@@ -876,7 +1037,7 @@ exports.deleteSoldItem = async (request, response) => {
                 .get()
                 .then((doc) => {
                     if (!doc.exists) {
-                        return response.status(404).json({ error: 'Item not found' })
+                        return response.status(404).json({ error: 'Barang tidak ditemukan' })
                     }
                     document.delete();
                 })
