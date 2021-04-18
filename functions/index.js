@@ -26,8 +26,9 @@ app.post('/user/resetpassword', sendEmailResetPassword);
 app.post('/user/image', auth, uploadProfilePhoto);
 app.get('/user', auth, getUserDetail);
 app.put('/user', auth, updateUserDetails);
-app.get('/users', auth, getAllUsers);
 app.get('/user/token', auth, getToken);
+
+app.get('/users', auth_admin, getAllUsers);
 
 //admin products
 const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');
@@ -66,9 +67,10 @@ app.put('/category/:categoryID',auth_admin, editCategory);
 //end admin categories
 
 //admin items
-const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem, updateMonthlyStock, updateStock, uploadImage, deleteItemImage } = require('./APIs/items');
+const { postOneItem, getAllItems, getOneItem, deleteItem, editItem, updatePostedItem, deletePostedItem, updateSoldItem, deleteSoldItem, updateMonthlyStock, updateStock, uploadImage, deleteItemImage, getAllDataItems } = require('./APIs/items');
 // app.get('/items', getAllItems);
 app.get('/product/:productID/items', getAllItems);
+app.get('/product/:productID/data/items', getAllDataItems);
 // app.get('/item/:itemID', getOneItem);
 app.get('/product/:productID/item/:itemID', getOneItem);
 // app.post('/item',auth_admin, postOneItem);
@@ -85,9 +87,14 @@ app.post('/product/:productID/item/:itemID/stock/monthly',auth_admin, updateMont
 app.post('/product/:productID/item/:itemID/stock/update',auth_admin, updateStock);
 
 
+const { getAllItemsPosted, getAllItemsPostedByProduct } = require('./APIs/items_posted');
+app.post('/product/:productID/item/:itemID/post',auth_admin, updatePostedItem);
+app.get('/items-posted', getAllItemsPosted);
+app.get('/items-posted/:productID', getAllItemsPostedByProduct);
 
 
-app.post('/item/post',auth_admin, updatePostedItem);
+
+// app.post('/item/post',auth_admin, updatePostedItem);
 app.delete('/item/post/delete',auth_admin, deletePostedItem);
 
 app.post('/item/sold',auth_admin, updateSoldItem);

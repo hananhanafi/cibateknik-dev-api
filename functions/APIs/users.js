@@ -94,6 +94,8 @@ exports.getAllUsers = async (request, response) => {
                 email: doc.data().email,
                 address: doc.data().address,
                 phoneNumber: doc.data().phoneNumber,
+                dateOfBirth: doc.data().dateOfBirth,
+                imageUrl: doc.data().imageUrl,
                 createdAt: doc.data().createdAt,
                 updatedAt: doc.data().updatedAt,
                 lastLogin: doc.data().lastLogin || doc.data().updatedAt,

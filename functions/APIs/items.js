@@ -4,6 +4,31 @@ const { validateEmptyData } = require('../util/validators');
 const { monthNames } = require('../util/constants');
 const { createSubstringArray } = require('../util/helpers');
 
+exports.getAllDataItems = async (request, response) => {
+    
+    const docRef = db.collection('products').doc(request.params.productID);
+    let items = []
+    await docRef.collection('items')
+    .get()
+    .then((data) => {
+        data.forEach((doc) => {
+            const data = doc.data();
+            delete data.searchKeywordsArray;
+            let currentID = doc.id
+            let appObj = { ...data, ['id']: currentID }
+            
+            items.push(appObj)
+        });
+    })
+    .catch((err) => {
+        console.error(err);
+        return response.status(500).json({ error: err});
+    });
+
+    return response.json({data:items,message: 'Succed'});
+
+}
+
 exports.getAllItems = async (request, response) => {
     
     const requestQuery = request.query;
@@ -110,10 +135,10 @@ exports.getAllItems = async (request, response) => {
     .then((data) => {
         data.forEach((doc) => {
             const data = doc.data();
-            let currentID = doc.id
-            let appObj = { ...data, ['id']: currentID }
+            let currentID = doc.id;
+            let appObj = { ...data, ['id']: currentID };
             
-            items.items_daily_stock.push(appObj)
+            items.items_daily_stock.push(appObj);
         });
     })
     .catch((err) => {
@@ -178,7 +203,6 @@ exports.postOneItem = async (request, response) => {
             stock: request.body.stock,
             minimumStock: request.body.minimumStock,
             price: request.body.price,
-            note: request.body.note,
             createdAt: date,
             updatedAt: date,
             additionalData: request.body.additionalData
@@ -195,6 +219,8 @@ exports.postOneItem = async (request, response) => {
             }
         })
         //end check if new item valid
+        
+        newItem.note = request.body.note || '';
         
         const searchKeywordsArray = await createSubstringArray(newItem.name);
         newItem.searchKeywordsArray = searchKeywordsArray;
@@ -344,9 +370,10 @@ exports.uploadImage = (request, response) => {
             await Promise.all(promises);
             
             const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
-            documentItem.update({
-                imagesItem
-            });
+            // documentItem.update({
+            //     imagesItem
+            // });
+            documentItem.update("imagesItem",fieldValue.arrayUnion(...imagesItem));
             
             return response.json({
                 message: `Images URL: ${imagesItem}`,
@@ -407,54 +434,90 @@ exports.editItem = async ( request, response ) => {
         response.status(403).json({message: 'Not allowed to edit'});
     }
 
-    let document = db.collection('products').doc(`${request.params.productID}`).collection('items').doc(`${request.params.itemID}`);
-
-    document.get()
-    .then(async (doc)=>{
-        if (!doc.exists) {
-            return response.status(404).json({ error: 'Barang tidak ditemukan' })
-        }
-        
-        if(doc.data().name!=updateItem.name){
-            //check if product already exixsts
-            const productsRef = db.collection('products');
-            const item = await productsRef.doc(`${request.params.productID}`).collection('items').doc(`${request.params.itemID}`).where('name', '==', updateItem.name).limit(1).get();
-            if(!item.empty){
-                return response.status(400).json({ item: 'Barang ' + updateItem.name + ' sudah ada' });
-            }
-
-        }
-
-    })
-    .catch((err) => {
-        return response.status(500).json({ error: 'server error' })
-    });
+    
     
     const res = updateItem.name.toLowerCase().split(" ");
     const nameArr = res.filter(item=>{
         return item!="";
     });
     const itemUID = nameArr.join("-");
-    updateItem.itemUID = itemUID;    
+    updateItem.itemUID = itemUID; 
+
+
+    let document = db.collection('products').doc(`${request.params.productID}`).collection('items').doc(`${request.params.itemID}`);
+
+    let isEmpty = false;
+    let isPosted = false;
+
+    await document.get()
+    .then(async (doc)=>{
+        if (!doc.exists) {
+            return response.status(404).json({ error: 'Barang tidak ditemukan' })
+        }else {
+            isPosted = doc.data().isPosted || false;
+        }
+        
+        if(doc.data().name!=updateItem.name){
+            try{
+                const productsRef = db.collection('products')
+                const item = await productsRef
+                .doc(`${request.params.productID}`).collection('items')
+                .where('itemUID', '==', updateItem.itemUID)
+                .limit(1).get()
+                .then()
+                .catch((err) => {
+                    return response.status(500).json({ error: err })
+                });
+                if(!item.empty){
+                    isEmpty = true;
+                    return response.status(400).json({ item: 'Barang ' + updateItem.name + ' sudah ada' });
+                }
+
+            }catch (err) {
+                return response.status(500).json({ error: err });
+            }
+
+        }
+
+    })
+    .catch((err) => {
+        return response.status(500).json({ error: err })
+    });
+
     const searchKeywordsArray = await createSubstringArray(updateItem.name);
     updateItem.searchKeywordsArray = searchKeywordsArray;
 
-    document.update(updateItem)
-    .then(()=> {
-        response.json({message: 'Updated successfully'});
-    })
-    .catch((err) => {
-        console.error(err);
-        return response.status(500).json({ 
-                error: err.code 
+    if(isPosted){
+        db.collection('items_posted').doc(request.params.itemID).update(updateItem)
+        .then(()=> {
+            response.json({message: 'Updated successfully'});
+        })
+        .catch((err) => {
+            console.error(err);
+            return response.status(500).json({ 
+                    error: err.code 
+            });
         });
-    });
+
+    }
+
+    if(!isEmpty){
+        document.update(updateItem)
+        .then(()=> {
+            response.json({message: 'Updated successfully'});
+        })
+        .catch((err) => {
+            console.error(err);
+            return response.status(500).json({ 
+                    error: err.code 
+            });
+        });
+    }
 };
 
 exports.deleteItem = async (request, response) => {
     
     try {
-        console.log("daily");
         const queryItemDailyStock = await db.collection('products').doc(request.params.productID).collection('items_daily_stock').where('itemID','==',request.params.itemID);
         await queryItemDailyStock.get().then((querySnapshot) => {
             querySnapshot.forEach((doc) => {
@@ -465,13 +528,11 @@ exports.deleteItem = async (request, response) => {
                 console.error(err);
                 return response.status(500).json({ error: err.code,message: 'Server error' });
             });
-        console.log("daily done");
     }catch (err) {
         return response.status(404).json({ error: err });
     }
 
     try {
-        console.log("monthly");
         const queryItemMonthlyStock = await db.collection('products').doc(request.params.productID).collection('items_monthly_stock').where('itemID','==',request.params.itemID);
         await queryItemMonthlyStock.get().then((querySnapshot) => {
             querySnapshot.forEach((doc) => {
@@ -482,7 +543,6 @@ exports.deleteItem = async (request, response) => {
                 console.error(err);
                 return response.status(500).json({ error: err.code,message: 'Server error' });
             });
-        console.log("monthly done");
     }catch (err) {
         return response.status(404).json({ error: err });
     }
@@ -493,7 +553,17 @@ exports.deleteItem = async (request, response) => {
             .then(async (doc) => {
                 if (!doc.exists) {
                     return response.status(404).json({ error: 'Barang tidak ditemukans' })
+                }else{
+                    if(doc.data().isPosted){
+                        try {
+                            const itemPosted = await db.collection('items_posted').doc(request.params.itemID);
+                            itemPosted.delete();
+                        }catch (err) {
+                            return response.status(404).json({ error: err });
+                        }
+                    }
                 }
+
                 if(doc.data().imagesItem){
                     const deleted_images = doc.data().imagesItem;
                 
@@ -896,44 +966,85 @@ exports.updateMonthlyStock = async (request, response) => {
 
 exports.updatePostedItem = async (request, response) => {
     try {
-        
-        const items_id = request.body.items_id;
-
-        await items_id.forEach(async item => {
-            let itemData = {};
-            let itemID = "";
-
-            await db
-            .doc(`/items/${item}`).get().then((doc)=>{
-                if (!doc.exists) {
-                    return response.status(404).json({ item: 'Barang tidak ditemukan' })
-                }else{
-                    itemID = doc.id;
-                    itemData = doc.data();
-                    itemData.createdAt = new Date();
-                    itemData.updatedAt = new Date();
-                }
-                
-            })
-            .catch (error => {
-                console.error(error);
-                return response.status(500).json({ error: error });
-            })
-            
-            await db
-            .collection('items_posted')
-            .doc(itemID)
-            .set(itemData)
-            .then(()=>{
-                //success add item posted
-            })
-            .catch (error => {
-                console.error(error);
-                return response.status(500).json({ error: error });
-            })
-
+        const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
+        await documentItem.get().then((doc)=>{
+            if (!doc.exists) {
+                return response.status(404).json({ item: 'Barang tidak ditemukan' })
+            }else{
+                itemID = doc.id;
+                itemData = doc.data();
+                itemData.createdAt = new Date();
+                itemData.updatedAt = new Date();
+                itemData.note = request.query.note || '';
+            }
             
         })
+        .catch (error => {
+            console.error(error);
+            return response.status(500).json({ error: error });
+        })
+        
+        await db
+        .collection('items_posted')
+        .doc(itemID)
+        .set(itemData)
+        .then(async ()=>{
+            //success add item posted
+        })
+        .catch (error => {
+            console.error(error);
+            return response.status(500).json({ error: error });
+        })
+
+        const isPosted = {
+            isPosted : true
+        }
+        try{
+            await documentItem.update(isPosted)
+        }
+        catch (error) {
+            console.error(error);
+            return response.status(500).json({ error: error });
+        }
+    
+        response.json({ message: 'Item posted successfull' });
+        
+        // const items_id = request.body.items_id;
+        // await items_id.forEach(async item => {
+        //     let itemData = {};
+        //     let itemID = "";
+
+        //     await db
+        //     .doc(`/items/${item}`).get().then((doc)=>{
+        //         if (!doc.exists) {
+        //             return response.status(404).json({ item: 'Barang tidak ditemukan' })
+        //         }else{
+        //             itemID = doc.id;
+        //             itemData = doc.data();
+        //             itemData.createdAt = new Date();
+        //             itemData.updatedAt = new Date();
+        //         }
+                
+        //     })
+        //     .catch (error => {
+        //         console.error(error);
+        //         return response.status(500).json({ error: error });
+        //     })
+            
+        //     await db
+        //     .collection('items_posted')
+        //     .doc(itemID)
+        //     .set(itemData)
+        //     .then(()=>{
+        //         //success add item posted
+        //     })
+        //     .catch (error => {
+        //         console.error(error);
+        //         return response.status(500).json({ error: error });
+        //     })
+
+            
+        // })
         
     } 
     catch (error) {

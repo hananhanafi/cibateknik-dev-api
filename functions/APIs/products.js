@@ -393,25 +393,43 @@ exports.deleteProduct = (request, response) => {
         .then((doc) => {
             if (!doc.exists) {
                 return response.status(404).json({ message: 'Produk tidak ditemukan' })
+            }else {
+                // document.collection('items').where('productID','==',productID).get()
+                // .then(function(querySnapshot) {
+                //     // Once we get the results, begin a batch
+                //     var batch = db.batch();
+
+                //     querySnapshot.forEach(function(doc) {
+                //         // For each doc, add a delete operation to the batch
+                //         batch.delete(doc.ref);
+                //     });
+
+                //     // Commit the batch
+                //     return batch.commit();
+                // }).then(function() {
+                //     // Delete completed!
+                //     // ...
+                //     return document.delete();
+                // }); 
+                
+                db.collection('items_posted').where('productID','==',productID).get()
+                .then(function(querySnapshot) {
+                    // Once we get the results, begin a batch
+                    var batch = db.batch();
+
+                    querySnapshot.forEach(function(doc) {
+                        // For each doc, add a delete operation to the batch
+                        batch.delete(doc.ref);
+                    });
+
+                    // Commit the batch
+                    return batch.commit();
+                }).then(function() {
+                    // Delete completed!
+                    // ...
+                    return document.delete();
+                }); 
             }
-            
-            db.collection('items').where('productID','==',productID).get()
-            .then(function(querySnapshot) {
-                // Once we get the results, begin a batch
-                var batch = db.batch();
-
-                querySnapshot.forEach(function(doc) {
-                    // For each doc, add a delete operation to the batch
-                    batch.delete(doc.ref);
-                });
-
-                // Commit the batch
-                return batch.commit();
-            }).then(function() {
-                // Delete completed!
-                // ...
-                return document.delete();
-            }); 
         })
         .then(() => {
             response.json({ message: 'Delete successfull' });
@@ -420,8 +438,6 @@ exports.deleteProduct = (request, response) => {
             console.error(err);
             return response.status(500).json({ error: err.code });
         });
-
-        // // First perform the query
 };
 
 exports.editProduct = async ( request, response ) => { 
