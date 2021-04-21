@@ -2,7 +2,6 @@ const { db, fieldValue } = require('../util/admin');
 const { createSubstringArray } = require('../util/helpers');
 
 exports.getAllProducts = async (request, response) => {
-
     const queryRequest = request.query;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
@@ -307,7 +306,6 @@ exports.getAllProducts = async (request, response) => {
 };
 
 exports.postOneProduct = async (request, response) => {
-
     try {
         if (request.body.name == undefined || request.body.name.trim() === '') {
             return response.status(400).json({ name: 'Must not be empty' });
@@ -394,23 +392,6 @@ exports.deleteProduct = (request, response) => {
             if (!doc.exists) {
                 return response.status(404).json({ message: 'Produk tidak ditemukan' })
             }else {
-                // document.collection('items').where('productID','==',productID).get()
-                // .then(function(querySnapshot) {
-                //     // Once we get the results, begin a batch
-                //     var batch = db.batch();
-
-                //     querySnapshot.forEach(function(doc) {
-                //         // For each doc, add a delete operation to the batch
-                //         batch.delete(doc.ref);
-                //     });
-
-                //     // Commit the batch
-                //     return batch.commit();
-                // }).then(function() {
-                //     // Delete completed!
-                //     // ...
-                //     return document.delete();
-                // }); 
                 
                 db.collection('items_posted').where('productID','==',productID).get()
                 .then(function(querySnapshot) {
@@ -441,7 +422,6 @@ exports.deleteProduct = (request, response) => {
 };
 
 exports.editProduct = async ( request, response ) => { 
-
     if(!request.params.productID){
         response.status(403).json({message: 'Not allowed to edit'});
     }
@@ -484,16 +464,6 @@ exports.editProduct = async ( request, response ) => {
     
     const searchKeywordsArray = await createSubstringArray(updateItem.name);
     updateItem.searchKeywordsArray = searchKeywordsArray;
-
-    // updateItem.additionalData = fieldValue.arrayRemove('Diameter','Ukuran');
-    // if(updateItem.deletedAdditionalData){
-    //     updateItem.additionalData = fieldValue.arrayRemove(...updateItem.deletedAdditionalData);
-    //     delete updateItem.deletedAdditionalData;
-    // }
-    // if(updateItem.newAdditionalData){
-    //     updateItem.additionalData = fieldValue.arrayUnion(...updateItem.newAdditionalData);
-    //     delete updateItem.newAdditionalData;
-    // }
 
     document.update(updateItem)
     .then(()=> {

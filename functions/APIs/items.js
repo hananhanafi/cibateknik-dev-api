@@ -5,7 +5,6 @@ const { monthNames } = require('../util/constants');
 const { createSubstringArray } = require('../util/helpers');
 
 exports.getAllDataItems = async (request, response) => {
-    
     const docRef = db.collection('products').doc(request.params.productID);
     let items = []
     await docRef.collection('items')
@@ -26,11 +25,9 @@ exports.getAllDataItems = async (request, response) => {
     });
 
     return response.json({data:items,message: 'Succed'});
-
 }
 
-exports.getAllItems = async (request, response) => {
-    
+exports.getAllItemsByProduct = async (request, response) => {
     const requestQuery = request.query;
     
     if (requestQuery.month == undefined || requestQuery.month.trim() === '') {
@@ -102,7 +99,6 @@ exports.getAllItems = async (request, response) => {
                 console.error(err);
                 return response.status(500).json({ error: err});
             });
-
         }
     } catch (error) {
         console.error(error);
@@ -126,7 +122,6 @@ exports.getAllItems = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-    
     
     await docRef.collection('items_daily_stock')
     .where('month','==',month)
@@ -374,6 +369,7 @@ exports.uploadImage = (request, response) => {
             //     imagesItem
             // });
             documentItem.update("imagesItem",fieldValue.arrayUnion(...imagesItem));
+            db.collection('items_posted').doc(request.params.itemID).update("imagesItem",fieldValue.arrayUnion(...imagesItem));
             
             return response.json({
                 message: `Images URL: ${imagesItem}`,
@@ -414,12 +410,12 @@ exports.deleteItemImage = async (request, response) => {
     try {
         await Promise.all(promises);
         documentItem.update("imagesItem",fieldValue.arrayRemove(...deleted_images));
+        db.collection('items_posted').doc(request.params.itemID).update("imagesItem",fieldValue.arrayRemove(...deleted_images));
         return response.json({ message: 'Image deleted successfully' });
     }catch (err) {
         return response.status(404).json({ error: err });
     }
 };
-
 
 exports.editItem = async ( request, response ) => { 
     let updateItem = Object.fromEntries(
@@ -594,8 +590,6 @@ exports.deleteItem = async (request, response) => {
                 console.error(err);
                 return response.status(500).json({ error: err.code,message: 'Server error' });
             });
-    
- 
 };
 
 exports.updateStock = async (request, response) => {
@@ -964,127 +958,6 @@ exports.updateMonthlyStock = async (request, response) => {
         
 };
 
-exports.updatePostedItem = async (request, response) => {
-    try {
-        const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
-        await documentItem.get().then((doc)=>{
-            if (!doc.exists) {
-                return response.status(404).json({ item: 'Barang tidak ditemukan' })
-            }else{
-                itemID = doc.id;
-                itemData = doc.data();
-                itemData.createdAt = new Date();
-                itemData.updatedAt = new Date();
-                itemData.note = request.query.note || '';
-            }
-            
-        })
-        .catch (error => {
-            console.error(error);
-            return response.status(500).json({ error: error });
-        })
-        
-        await db
-        .collection('items_posted')
-        .doc(itemID)
-        .set(itemData)
-        .then(async ()=>{
-            //success add item posted
-        })
-        .catch (error => {
-            console.error(error);
-            return response.status(500).json({ error: error });
-        })
-
-        const isPosted = {
-            isPosted : true
-        }
-        try{
-            await documentItem.update(isPosted)
-        }
-        catch (error) {
-            console.error(error);
-            return response.status(500).json({ error: error });
-        }
-    
-        response.json({ message: 'Item posted successfull' });
-        
-        // const items_id = request.body.items_id;
-        // await items_id.forEach(async item => {
-        //     let itemData = {};
-        //     let itemID = "";
-
-        //     await db
-        //     .doc(`/items/${item}`).get().then((doc)=>{
-        //         if (!doc.exists) {
-        //             return response.status(404).json({ item: 'Barang tidak ditemukan' })
-        //         }else{
-        //             itemID = doc.id;
-        //             itemData = doc.data();
-        //             itemData.createdAt = new Date();
-        //             itemData.updatedAt = new Date();
-        //         }
-                
-        //     })
-        //     .catch (error => {
-        //         console.error(error);
-        //         return response.status(500).json({ error: error });
-        //     })
-            
-        //     await db
-        //     .collection('items_posted')
-        //     .doc(itemID)
-        //     .set(itemData)
-        //     .then(()=>{
-        //         //success add item posted
-        //     })
-        //     .catch (error => {
-        //         console.error(error);
-        //         return response.status(500).json({ error: error });
-        //     })
-
-            
-        // })
-        
-    } 
-    catch (error) {
-        console.error(error);
-        return response.status(500).json({ error: error });
-    }
-
-    return response.status(200).json({"message":"Berhasil menambahkan item pada katalog"});
-};
-
-exports.deletePostedItem = async (request, response) => {
-    try {
-        
-        const items_id = request.body.items_id;
-
-        await items_id.forEach(async item => {
-            const document = db.doc(`/items_posted/${item}`);
-            await document
-                .get()
-                .then((doc) => {
-                    if (!doc.exists) {
-                        return response.status(404).json({ error: 'Barang tidak ditemukan' })
-                    }
-                    document.delete();
-                })
-                .catch((err) => {
-                    console.error(err);
-                    return response.status(500).json({ error: err.code });
-                });
-        })
-        
-    } 
-    catch (error) {
-        console.error(error);
-        return response.status(500).json({ error: error });
-    }
-
-
-    return response.status(200).json({"message":"Berhasil menghapus item"});
-};
 
 exports.updateSoldItem = async (request, response) => {
     try {
