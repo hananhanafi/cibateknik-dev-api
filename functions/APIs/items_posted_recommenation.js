@@ -1,26 +1,82 @@
 const { db, fieldValue } = require('../util/admin');
 
-exports.getAllItemsPosted = async (request, response) => {
+exports.addCatalogRecommendationItem = async (request, response) => {
+    try {
+        const listItemID = request.body.items_id;
+        const documentRecommendationItem = db.collection('catalog').doc('recommendation-item')
+        documentRecommendationItem.update('listItemID',fieldValue.arrayUnion(...listItemID));
+    } 
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({ error: error });
+    }
+
+    return response.status(200).json({"message":"Berhasil menambahkan item pada katalog barang rekomendasi"});
+};
+
+
+exports.deleteCatalogRecommendationItem = async (request, response) => {
+    try {
+        const listItemID = request.body.items_id;
+        const documentRecommendationItem = db.collection('catalog').doc('recommendation-item')
+        documentRecommendationItem.update('listItemID',fieldValue.arrayRemove(...listItemID));
+    } 
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({ error: error });
+    }
+
+    return response.status(200).json({"message":"Berhasil menghapus item pada katalog barang rekomendasi"});
+};
+
+
+exports.getAllRecommendationItemsPosted = async (request, response) => {
+    let listItemID = [];
+
+    //query get limited data for pagination
+    await db.collection('catalog').doc('recommendation-item')
+    .get()
+    .then((doc) => {
+        if (!doc.exists) {
+            return response.status(404).json({ message: 'Barang tidak ditemukan' })
+        }
+        if (doc.exists) {
+            listItemID = doc.data().listItemID; 
+        }	
+    })
+    .catch((err) => {
+        console.error(err);
+        return response.status(500).json({ error: err.code });
+    });
+
+    if(listItemID.length<1){
+        return response.status(404).json({ message: 'Barang tidak ditemukan' })
+    }
+    
     const queryRequest = request.query;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
     const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 2;
 
     //query get all data for counting total data
-    let queryGetAll = db.collection('items_posted').orderBy('createdAt', order);
+    let queryGetAll = db.collection('items_posted').orderBy('createdAt', order)
+    .where('itemID','in',listItemID);
     
     //query get limited data for pagination
     let queryGetData = db.collection('items_posted')
     .orderBy('createdAt', order)
+    .where('itemID','in',listItemID)
     .limit(limit);
     
     if(search){
         queryGetAll = db.collection('items_posted')
         .orderBy('createdAt', order)
+        .where('itemID','in',listItemID)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
 
         queryGetData = db.collection('items_posted')
         .orderBy('createdAt', order)
+        .where('itemID','in',listItemID)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
         .limit(limit);
         
@@ -42,6 +98,7 @@ exports.getAllItemsPosted = async (request, response) => {
             const first = db.collection('items_posted')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
             .orderBy('createdAt', order)
+            .where('itemID','in',listItemID)
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
@@ -49,17 +106,20 @@ exports.getAllItemsPosted = async (request, response) => {
             queryGetData = db.collection('items_posted')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
             .orderBy('createdAt', order)
+            .where('itemID','in',listItemID)
             .startAfter(last.data().createdAt)
             .limit(limit)
         }else{
             const first = db.collection('items_posted')
             .orderBy('createdAt', order)
+            .where('itemID','in',listItemID)
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
             
             queryGetData = db.collection('items_posted')
             .orderBy('createdAt', order)
+            .where('itemID','in',listItemID)
             .startAfter(last.data().createdAt)
             .limit(limit)
         }
@@ -97,107 +157,12 @@ exports.getAllItemsPosted = async (request, response) => {
     });
 };
 
-exports.getAllItemsPostedByProduct = async (request, response) => {
-    const queryRequest = request.query;
-    const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
-    const search = queryRequest.search;
-    const limit = queryRequest.limit ? queryRequest.limit : 10;
 
-    const productID = request.params.productID;
-    //query get all data for counting total data
-    let queryGetAll = db.collection('items_posted').orderBy('createdAt', order).where('productID','==',productID);
-    
+exports.getAllRecommendationItemsPostedByProduct = async (request, response) => {
+    let listItemID = [];
+
     //query get limited data for pagination
-    let queryGetData = db.collection('items_posted')
-    .orderBy('createdAt', order).where('productID','==',productID)
-    .limit(limit);
-    
-    if(search){
-        queryGetAll = db.collection('items_posted')
-        .orderBy('createdAt', order).where('productID','==',productID)
-        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-
-        queryGetData = db.collection('items_posted')
-        .orderBy('createdAt', order).where('productID','==',productID)
-        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-        .limit(limit);
-        
-    }
-
-    const snapshot = await queryGetAll.get();
-    const total = snapshot.docs.length;
-    const first_page = 1;
-    const last_page = Math.ceil(total/limit);
-    const current_page = queryRequest.page ? queryRequest.page : 1;
-
-
-    let first_index = total > 0 ? 1 : 0 ;
-    let last_index = total > limit ? limit : total;
-
-    
-    if(current_page>1){
-        if(search){
-            const first = db.collection('items_posted').where('productID','==',productID)
-            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
-            .limit((limit*current_page)-limit);
-            const snapshotFirst = await first.get();
-            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
-
-            queryGetData = db.collection('items_posted').where('productID','==',productID)
-            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
-            .startAfter(last.data().createdAt)
-            .limit(limit)
-        }else{
-            const first = db.collection('items_posted').where('productID','==',productID)
-            .orderBy('createdAt', order)
-            .limit((limit*current_page)-limit);
-            const snapshotFirst = await first.get();
-            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
-            
-            queryGetData = db.collection('items_posted').where('productID','==',productID)
-            .orderBy('createdAt', order)
-            .startAfter(last.data().createdAt)
-            .limit(limit)
-        }
-
-        const snapshot = await queryGetData.get();
-        first_index = ((limit*current_page)-(limit-1));
-        last_index = first_index + snapshot.docs.length-1;
-    }
-
-    queryGetData.get()
-    .then((data) => {
-        let items_posted = {
-            data:[],
-            meta: {
-                first_index: first_index,
-                last_index: last_index,
-                current_page: parseInt(current_page),
-                first_page: first_page,
-                last_page: last_page,
-                total: total,
-            }
-        };
-        data.forEach((doc) => {
-            const data = doc.data();
-            let currentID = doc.id;
-            let appObj = { ...data, ['id']: currentID };
-
-            items_posted.data.push(appObj);
-        });
-        return response.json(items_posted);
-    })
-    .catch((err) => {
-        console.error(err);
-        return response.status(500).json({ error: err});
-    });
-};
-
-exports.getOneItemPosted = (request, response) => {
-    const document = db.doc(`/items_posted/${request.params.itemID}`);
-    document
+    await db.collection('catalog').doc('recommendation-item')
     .get()
     .then((doc) => {
         if (!doc.exists) {
@@ -205,146 +170,122 @@ exports.getOneItemPosted = (request, response) => {
         }
         let itemData = {};
         if (doc.exists) {
-            itemData = doc.data();
-            itemData.id = doc.id;
-            return response.json(itemData);
+            // itemData = doc.data();
+            // itemData.id = doc.id;
+            listItemID = doc.data().listItemID;
         }	
     })
     .catch((err) => {
         console.error(err);
         return response.status(500).json({ error: err.code });
     });
-};
 
-exports.addPostedItem = async (request, response) => {
-    try {
-        const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
-        await documentItem.get().then((doc)=>{
-            if (!doc.exists) {
-                return response.status(404).json({ item: 'Barang tidak ditemukan' })
-            }else{
-                itemID = doc.id;
-                itemData = doc.data();
-                itemData.createdAt = new Date();
-                itemData.updatedAt = new Date();
-                itemData.itemID = itemID;
-                itemData.description = request.body.description || '';
-            }
-            
-        })
-        .catch (error => {
-            console.error(error);
-            return response.status(500).json({ error: error });
-        })
-        
-        await db
-        .collection('items_posted')
-        .doc(itemID)
-        .set(itemData)
-        .then(async ()=>{
-            //success add item posted
-        })
-        .catch (error => {
-            console.error(error);
-            return response.status(500).json({ error: error });
-        })
+    if(listItemID.length<1){
+        return response.status(404).json({ message: 'Barang tidak ditemukan' })
+    }
 
-        const isPosted = {
-            isPosted : true
-        }
-        try{
-            await documentItem.update(isPosted)
-        }
-        catch (error) {
-            console.error(error);
-            return response.status(500).json({ error: error });
-        }
+
+    const queryRequest = request.query;
+    const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
+    const search = queryRequest.search;
+    const limit = queryRequest.limit ? queryRequest.limit : 10;
+
+    const productID = request.params.productID;
+    //query get all data for counting total data
+    let queryGetAll = db.collection('items_posted').orderBy('createdAt', order)
+    .where('itemID','in',listItemID).where('productID','==',productID);
     
-        response.json({ message: 'Berhasil menambahkan item pada katalog' });
-    } 
-    catch (error) {
-        console.error(error);
-        return response.status(500).json({ error: error });
+    //query get limited data for pagination
+    let queryGetData = db.collection('items_posted')
+    .orderBy('createdAt', order)
+    .where('itemID','in',listItemID).where('productID','==',productID)
+    .limit(limit);
+    
+    if(search){
+        queryGetAll = db.collection('items_posted')
+        .orderBy('createdAt', order)
+        .where('itemID','in',listItemID).where('productID','==',productID)
+        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+
+        queryGetData = db.collection('items_posted')
+        .orderBy('createdAt', order)
+        .where('itemID','in',listItemID).where('productID','==',productID)
+        .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+        .limit(limit);
+        
     }
 
-    return response.status(200).json({"message":"Berhasil menambahkan item pada katalog"});
-};
+    const snapshot = await queryGetAll.get();
+    const total = snapshot.docs.length;
+    const first_page = 1;
+    const last_page = Math.ceil(total/limit);
+    const current_page = queryRequest.page ? queryRequest.page : 1;
 
-exports.updatePostedItem = async (request, response) => {
-    try {
-        // const product_id = request.body.product_id;
-        const item_id = request.params.itemID;
-        const description = request.body.description;
-        const updateItemPosted ={
-            description : description
+
+    let first_index = total > 0 ? 1 : 0 ;
+    let last_index = total > limit ? limit : total;
+
+    
+    if(current_page>1){
+        if(search){
+            const first = db.collection('items_posted').where('productID','==',productID)
+            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            .orderBy('createdAt', order)
+            .where('itemID','in',listItemID)
+            .limit((limit*current_page)-limit);
+            const snapshotFirst = await first.get();
+            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+
+            queryGetData = db.collection('items_posted').where('productID','==',productID)
+            .where("searchKeywordsArray", "array-contains", search.toLowerCase())
+            .orderBy('createdAt', order)
+            .where('itemID','in',listItemID)
+            .startAfter(last.data().createdAt)
+            .limit(limit)
+        }else{
+            const first = db.collection('items_posted').where('productID','==',productID)
+            .orderBy('createdAt', order)
+            .where('itemID','in',listItemID)
+            .limit((limit*current_page)-limit);
+            const snapshotFirst = await first.get();
+            const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+            
+            queryGetData = db.collection('items_posted').where('productID','==',productID)
+            .orderBy('createdAt', order)
+            .where('itemID','in',listItemID)
+            .startAfter(last.data().createdAt)
+            .limit(limit)
         }
-        
-        let documentItemPosted = db.collection('items_posted').doc(item_id);
 
-        await documentItemPosted.get()
-        .then((doc)=>{
-            if (!doc.exists) {
-                return response.status(404).json({ message: 'Produk tidak ditemukan' })
+        const snapshot = await queryGetData.get();
+        first_index = ((limit*current_page)-(limit-1));
+        last_index = first_index + snapshot.docs.length-1;
+    }
+
+    queryGetData.get()
+    .then((data) => {
+        let items_posted = {
+            data:[],
+            meta: {
+                first_index: first_index,
+                last_index: last_index,
+                current_page: parseInt(current_page),
+                first_page: first_page,
+                last_page: last_page,
+                total: total,
             }
-        })
-        .catch((err) => {
-            return response.status(404).json({ message: 'Produk tidak ditemukan' })
+        };
+        data.forEach((doc) => {
+            const data = doc.data();
+            let currentID = doc.id;
+            let appObj = { ...data, ['id']: currentID };
+
+            items_posted.data.push(appObj);
         });
-
-        documentItemPosted.update(updateItemPosted)
-        .then(()=> {
-            response.json({message: 'Updated successfully', data: updateItemPosted});
-        })
-        .catch((err) => {
-            console.error(err);
-            return response.status(500).json({ 
-                    error: err.code 
-            });
-        });
-    } 
-    catch (error) {
-        console.error(error);
-        return response.status(500).json({ error: error });
-    }
-    return response.status(200).json({"message":"Berhasil mengupdate baramg katalog", data: updateItemPosted});
-};
-
-exports.deletePostedItem = async (request, response) => {
-        const items_id = request.body.items_id;
-        const promises = [];
-        
-        await items_id.forEach(async itemID => {
-            promises.push(
-                db.doc(`/items_posted/${itemID}`).get()
-                .then((doc)=>{
-                    if (!doc.exists) {
-                        return response.status(404).json({ error: 'Barang tidak ditemukan' })
-                    }
-                    return doc.data();
-                })
-                .then((data)=>{
-                    const isPosted = {
-                        isPosted : false
-                    }
-                    try{
-                        db.doc(`/products/${data.productID}/items/${itemID}`).update(isPosted)
-                    }
-                    catch (error) {
-                        console.error(error);
-                        return response.status(500).json({ error: error });
-                    }
-
-                    return db.doc(`/items_posted/${itemID}`).delete() ;
-                })
-            );
-        });
-    try {
-        await Promise.all(promises);
-        return response.status(200).json({"message":"Berhasil menghapus item"});
-
-    } 
-    catch (error) {
-        console.error(error);
-        return response.status(500).json({ error: error });
-    }
+        return response.json(items_posted);
+    })
+    .catch((err) => {
+        console.error(err);
+        return response.status(500).json({ error: err});
+    });
 };

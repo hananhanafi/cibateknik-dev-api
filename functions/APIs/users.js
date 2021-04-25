@@ -146,20 +146,28 @@ exports.loginUser = (request, response) => {
             //     return response.status(403).json({ message: 'Please verify your account'});
             // }
 
-            console.log("DATUS",data.user.uid);
             
             db.collection('users').doc(`${data.user.uid}`).update({lastLogin:new Date()})
             // return data.user.getIdToken(true);
             return data.user.getIdTokenResult(true);
         })
         .then((token) => {
-            console.log("token",token);
             return response.json({ token });
         })
         .catch((error) => {
             console.error(error);
             return response.status(403).json({ error:error,message: 'wrong credentials, please try again'});
         })
+};
+
+// logout
+exports.logoutUser = (request, response) => {
+    firebase.auth().signOut().then(() => {
+    // Sign-out successful.
+    }).catch((error) => {
+    // An error happened.
+        return response.status(403).json({ error:error,message: 'wrong credentials, please try again'});
+    });
 };
 
 exports.signUpUser = async (request, response) => {
@@ -304,10 +312,18 @@ exports.uploadProfilePhoto = async (request, response) => {
 	busboy.end(request.rawBody);
 };
 
-exports.getUserDetail = (request, response) => {
+exports.getUserDetail = async (request, response) => {
     let userData = {};
 
     // return response.json(firebase.auth().currentUser.emailVerified);
+
+    let isVerified = false;
+
+    try {
+        isVerified = await firebase.auth().currentUser.emailVerified;
+    }catch (error){
+        return response.status(500).json({ message: 'Something went wrong, please try again' });
+    }
 
 	db
 		.doc(`/users/${request.user.uid}`)
@@ -315,6 +331,7 @@ exports.getUserDetail = (request, response) => {
 		.then((doc) => {
 			if (doc.exists) {
                 userData.userCredentials = doc.data();
+                userData.isVerified = isVerified;
                 return response.json(userData);
 			}	
 		})
@@ -381,14 +398,12 @@ exports.updateUserDetails = async (request, response) => {
 
 
 exports.sendVerificationEmail = (request, response) => {
-    var auth = firebase.auth().user;
-    var emailAddress = request.body.email;
-
-    auth.sendEmailVerification(emailAddress).then(function() {
-        // Email sent.
-    return response.status(201).json({ message:"Send email success" });
+    var user = firebase.auth().currentUser;
+    user.sendEmailVerification().then(function() {
+    // Email sent.
+        return response.status(201).json({ message:"Send email success" });
     }).catch(function(error) {
-        // An error happened.
+    // An error happened.
         return response.status(500).json({ error: error.code });
     });
 }

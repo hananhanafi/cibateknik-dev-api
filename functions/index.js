@@ -17,11 +17,12 @@ app.post('/admin/login', loginAdmin);
 app.post('/admin/signup', signUpAdmin);
 
 
-const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword, getAllUsers, getToken} = require('./APIs/users');
+const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword, getAllUsers, getToken, logoutUser} = require('./APIs/users');
 //user
 app.post('/user/signup', signUpUser);
 app.post('/user/login', loginUser);
-app.post('/user/sendemailverivication', sendVerificationEmail);
+app.post('/user/logout', logoutUser);
+app.post('/user/sendemailverivication', auth, sendVerificationEmail);
 app.post('/user/resetpassword', sendEmailResetPassword);
 app.post('/user/image', auth, uploadProfilePhoto);
 app.get('/user', auth, getUserDetail);
@@ -81,13 +82,27 @@ app.delete('/product/:productID/item/:itemID', auth_admin, deleteItem);
 app.post('/product/:productID/item/:itemID/stock/monthly', auth_admin, updateMonthlyStock);
 app.post('/product/:productID/item/:itemID/stock/update', auth_admin, updateStock);
 
-const { getAllItemsPosted, getAllItemsPostedByProduct, getOneItemPosted, addPostedItem, deletePostedItem, updatePostedItem, } = require('./APIs/items_posted');
+const { getAllItemsPosted, getAllItemsPostedByProduct, getOneItemPosted, addPostedItem, deletePostedItem, updatePostedItem} = require('./APIs/items_posted');
 app.post('/product/:productID/item/:itemID/post',auth_admin, addPostedItem);
 app.get('/items-posted', getAllItemsPosted);
 app.get('/items-posted/:productID', getAllItemsPostedByProduct);
 app.get('/item/posted/:itemID', getOneItemPosted);
 app.post('/item/posted/:itemID/update', auth_admin, updatePostedItem);
-app.delete('/item/posted/delete',auth_admin, deletePostedItem);
+app.post('/item/posted/delete',auth_admin, deletePostedItem);
+
+
+const { addCatalogNewestItem, getAllNewestItemsPosted, getAllNewestItemsPostedByProduct, deleteCatalogNewestItem, } = require('./APIs/items_posted_newest');
+app.post('/item-posted-newest',auth_admin, addCatalogNewestItem);
+app.post('/delete/item-posted-newest',auth_admin, deleteCatalogNewestItem);
+app.get('/items-posted-newest', getAllNewestItemsPosted);
+app.get('/items-posted-newest/:productID', getAllNewestItemsPostedByProduct);
+
+
+const { getAllRecommendationItemsPosted, getAllRecommendationItemsPostedByProduct, addCatalogRecommendationItem, deleteCatalogRecommendationItem } = require('./APIs/items_posted_recommenation');
+app.post('/item-posted-recommendation',auth_admin, addCatalogRecommendationItem);
+app.post('/delete/item-posted-recommendation',auth_admin, deleteCatalogRecommendationItem);
+app.get('/items-posted-recommendation', getAllRecommendationItemsPosted);
+app.get('/items-posted-recommendation/:productID', getAllRecommendationItemsPostedByProduct);
 
 
 app.post('/item/sold',auth_admin, updateSoldItem);
