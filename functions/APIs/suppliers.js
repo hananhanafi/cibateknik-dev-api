@@ -2,31 +2,6 @@ const { db } = require('../util/admin');
 const { createSubstringArray } = require('../util/helpers');
 const { validateEmptyData } = require('../util/validators');
 
-// exports.getAllSuppliers = (request, response) => {
-    
-// 	db
-// 		.collection('suppliers')
-// 		.orderBy('createdAt', 'desc')
-// 		.get()
-// 		.then((data) => {
-// 			let suppliers = [];
-// 			data.forEach((doc) => {
-// 				suppliers.push({
-//                     supplierID: doc.id,
-//                     name: doc.data().name,
-//                     address: doc.data().address,
-// 					createdAt: doc.data().createdAt,
-// 					updatedat: doc.data().updatedat,
-// 				});
-// 			});
-// 			return response.json(suppliers);
-// 		})
-// 		.catch((err) => {
-// 			console.error(err);
-// 			return response.status(500).json({ error: err});
-// 		});
-// };
-
 exports.getAllSuppliers = async (request, response) => {
     const queryRequest = request.query;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';

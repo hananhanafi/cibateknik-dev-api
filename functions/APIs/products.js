@@ -1,4 +1,4 @@
-const { db, fieldValue } = require('../util/admin');
+const { db } = require('../util/admin');
 const { createSubstringArray } = require('../util/helpers');
 
 exports.getAllProducts = async (request, response) => {

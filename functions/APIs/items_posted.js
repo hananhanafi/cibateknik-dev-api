@@ -1,4 +1,4 @@
-const { db, fieldValue } = require('../util/admin');
+const { db } = require('../util/admin');
 
 exports.getAllItemsPosted = async (request, response) => {
     const queryRequest = request.query;
