@@ -104,6 +104,11 @@ app.post('/delete/item-posted-recommendation',auth_admin, deleteCatalogRecommend
 app.get('/items-posted-recommendation', getAllRecommendationItemsPosted);
 app.get('/items-posted-recommendation/:productID', getAllRecommendationItemsPostedByProduct);
 
+const { addItemToCart, getUserCart, getUserCartWithItem } = require('./APIs/carts');
+app.post('/user/cart/add', auth, addItemToCart);
+app.get('/user/cart', auth, getUserCart);
+app.get('/user/cart/items', auth, getUserCartWithItem);
+
 
 app.post('/item/sold',auth_admin, updateSoldItem);
 app.delete('/item/sold/delete',auth_admin, deleteSoldItem);

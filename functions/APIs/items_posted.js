@@ -5,22 +5,23 @@ exports.getAllItemsPosted = async (request, response) => {
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
     const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 2;
+    const orderBy = queryRequest.isOrderByPrice == 1 ? 'price' : 'createdAt';
 
     //query get all data for counting total data
-    let queryGetAll = db.collection('items_posted').orderBy('createdAt', order);
+    let queryGetAll = db.collection('items_posted').orderBy(orderBy, order);
     
     //query get limited data for pagination
     let queryGetData = db.collection('items_posted')
-    .orderBy('createdAt', order)
+    .orderBy(orderBy, order)
     .limit(limit);
     
     if(search){
         queryGetAll = db.collection('items_posted')
-        .orderBy('createdAt', order)
+        .orderBy(orderBy, order)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
 
         queryGetData = db.collection('items_posted')
-        .orderBy('createdAt', order)
+        .orderBy(orderBy, order)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
         .limit(limit);
         
@@ -41,26 +42,26 @@ exports.getAllItemsPosted = async (request, response) => {
         if(search){
             const first = db.collection('items_posted')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
+            .orderBy(orderBy, order)
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
 
             queryGetData = db.collection('items_posted')
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
-            .startAfter(last.data().createdAt)
+            .orderBy(orderBy, order)
+            .startAfter(last.data()[orderBy])
             .limit(limit)
         }else{
             const first = db.collection('items_posted')
-            .orderBy('createdAt', order)
+            .orderBy(orderBy, order)
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
-            
+            console.log("last",last.data().name);
             queryGetData = db.collection('items_posted')
-            .orderBy('createdAt', order)
-            .startAfter(last.data().createdAt)
+            .orderBy(orderBy, order)
+            .startAfter(last.data()[orderBy])
             .limit(limit)
         }
 
@@ -102,23 +103,24 @@ exports.getAllItemsPostedByProduct = async (request, response) => {
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
     const limit = queryRequest.limit ? queryRequest.limit : 10;
+    const orderBy = queryRequest.isOrderByPrice == 1 ? 'price' : 'createdAt';
 
     const productID = request.params.productID;
     //query get all data for counting total data
-    let queryGetAll = db.collection('items_posted').orderBy('createdAt', order).where('productID','==',productID);
+    let queryGetAll = db.collection('items_posted').orderBy(orderBy, order).where('productID','==',productID);
     
     //query get limited data for pagination
     let queryGetData = db.collection('items_posted')
-    .orderBy('createdAt', order).where('productID','==',productID)
+    .orderBy(orderBy, order).where('productID','==',productID)
     .limit(limit);
     
     if(search){
         queryGetAll = db.collection('items_posted')
-        .orderBy('createdAt', order).where('productID','==',productID)
+        .orderBy(orderBy, order).where('productID','==',productID)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
 
         queryGetData = db.collection('items_posted')
-        .orderBy('createdAt', order).where('productID','==',productID)
+        .orderBy(orderBy, order).where('productID','==',productID)
         .where("searchKeywordsArray", "array-contains", search.toLowerCase())
         .limit(limit);
         
@@ -139,25 +141,25 @@ exports.getAllItemsPostedByProduct = async (request, response) => {
         if(search){
             const first = db.collection('items_posted').where('productID','==',productID)
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
+            .orderBy(orderBy, order)
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
 
             queryGetData = db.collection('items_posted').where('productID','==',productID)
             .where("searchKeywordsArray", "array-contains", search.toLowerCase())
-            .orderBy('createdAt', order)
+            .orderBy(orderBy, order)
             .startAfter(last.data().createdAt)
             .limit(limit)
         }else{
             const first = db.collection('items_posted').where('productID','==',productID)
-            .orderBy('createdAt', order)
+            .orderBy(orderBy, order)
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
             
             queryGetData = db.collection('items_posted').where('productID','==',productID)
-            .orderBy('createdAt', order)
+            .orderBy(orderBy, order)
             .startAfter(last.data().createdAt)
             .limit(limit)
         }

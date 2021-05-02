@@ -197,7 +197,7 @@ exports.postOneItem = async (request, response) => {
             name: request.body.name,
             stock: request.body.stock,
             minimumStock: request.body.minimumStock,
-            price: request.body.price,
+            price: parseInt(request.body.price),
             createdAt: date,
             updatedAt: date,
             additionalData: request.body.additionalData
@@ -421,6 +421,9 @@ exports.editItem = async ( request, response ) => {
     let updateItem = Object.fromEntries(
         Object.entries(request.body).filter(([key, value]) => value != null) );
     
+    if(updateItem.price){
+        updateItem.price = parseInt(updateItem.price);
+    }
     updateItem.updatedAt = new Date();
 
     if (request.body.name == undefined || request.body.name.trim() === '') {
