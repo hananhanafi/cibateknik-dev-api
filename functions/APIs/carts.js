@@ -105,7 +105,8 @@ exports.getUserCartWithItem = async (request, response) => {
         data.forEach((doc) => {
             const data = doc.data();
             let currentID = doc.id;
-            let appObj = { ...data, ['id']: currentID };
+            let appObj = {};
+            appObj.item = { ...data, ['id']: currentID };
             appObj.cart = listItem.find(item=> {return item.itemID == currentID});
             items.data.push(appObj);
         });

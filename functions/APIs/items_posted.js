@@ -230,6 +230,7 @@ exports.addPostedItem = async (request, response) => {
                 itemData.createdAt = new Date();
                 itemData.updatedAt = new Date();
                 itemData.itemID = itemID;
+                itemData.weight = request.body.weight || 0;
                 itemData.description = request.body.description || '';
             }
             
@@ -276,9 +277,11 @@ exports.updatePostedItem = async (request, response) => {
     try {
         // const product_id = request.body.product_id;
         const item_id = request.params.itemID;
+        const weight = request.body.weight;
         const description = request.body.description;
         const updateItemPosted ={
-            description : description
+            weight : weight,
+            description : description,
         }
         
         let documentItemPosted = db.collection('items_posted').doc(item_id);

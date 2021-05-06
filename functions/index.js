@@ -110,6 +110,24 @@ app.get('/user/cart', auth, getUserCart);
 app.get('/user/cart/items', auth, getUserCartWithItem);
 
 
+const { addWishlist, deleteUserWishlist, getUserWishlist, getUserWishlistWithItem } = require('./APIs/wishlists');
+app.post('/user/wishlist/add', auth, addWishlist);
+app.post('/user/wishlist/delete', auth, deleteUserWishlist);
+app.get('/user/wishlist', auth, getUserWishlist);
+app.get('/user/wishlist/items', auth, getUserWishlistWithItem);
+
+const { createUserAddress, getUserAddresses, deleteUserAddress, editUserAddress, updateMainAddress } = require('./APIs/addresses');
+app.get('/user/address', auth, getUserAddresses);
+app.post('/user/address', auth, createUserAddress);
+app.put('/user/address/:addressID', auth,editUserAddress );
+app.delete('/user/address/:addressID', auth, deleteUserAddress);
+app.post('/user/main-address/update/:addressID', auth, updateMainAddress);
+
+const { getAllAdminMessages, postOneadminMessage, deleteOneAdminMessage } = require('./APIs/admin_messages');
+app.get('/admin/messages', auth_admin, getAllAdminMessages);
+app.post('/user/admin-message/send',postOneadminMessage);
+app.delete('/user/admin-message/delete/:messageID',deleteOneAdminMessage);
+
 app.post('/item/sold',auth_admin, updateSoldItem);
 app.delete('/item/sold/delete',auth_admin, deleteSoldItem);
 

@@ -195,7 +195,7 @@ exports.postOneItem = async (request, response) => {
         const newItem = {
             ...ids,
             name: request.body.name,
-            stock: request.body.stock,
+            stock: parseInt(request.body.stock),
             minimumStock: request.body.minimumStock,
             price: parseInt(request.body.price),
             createdAt: date,
@@ -424,6 +424,9 @@ exports.editItem = async ( request, response ) => {
     if(updateItem.price){
         updateItem.price = parseInt(updateItem.price);
     }
+    if(updateItem.stock){
+        updateItem.stock = parseInt(updateItem.stock);
+    }
     updateItem.updatedAt = new Date();
 
     if (request.body.name == undefined || request.body.name.trim() === '') {
@@ -614,7 +617,7 @@ exports.updateStock = async (request, response) => {
     const year = requestBody.year;
     const requestStockIn = parseInt(requestBody.in);
     const requestStockOut = parseInt(requestBody.out);
-    const requestTotalStock = requestStockIn-requestStockOut;
+    const requestTotalStock = parseInt(requestStockIn) - parseInt(requestStockOut);
 
     
     let currentStock = {
