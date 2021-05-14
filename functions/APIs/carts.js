@@ -1,4 +1,4 @@
-const { db, fieldValue, firebase } = require('../util/admin');
+const { db, fieldValue } = require('../util/admin');
 
 exports.addItemToCart = async (request, response) => {
     try {
@@ -11,8 +11,6 @@ exports.addItemToCart = async (request, response) => {
             amount : amount,
         }
         let itemList = {itemList: [newItemCart]}
-        console.log("userID",userID);
-        console.log("itemlist",itemList);
         const documentUserCart = db.collection('users_cart').doc(userID)
 
         documentUserCart.get()
@@ -37,8 +35,6 @@ exports.addItemToCart = async (request, response) => {
             }
         })
         
-        // documentUserCart.set('itemList',fieldValue.arrayUnion(...newItemCart));
-        // documentUserCart.set(itemList)
     } 
     catch (error) {
         console.error(error);
@@ -116,8 +112,5 @@ exports.getUserCartWithItem = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-
-
-
 
 }

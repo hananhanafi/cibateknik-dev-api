@@ -58,7 +58,6 @@ exports.getAllItemsPosted = async (request, response) => {
             .limit((limit*current_page)-limit);
             const snapshotFirst = await first.get();
             const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
-            console.log("last",last.data().name);
             queryGetData = db.collection('items_posted')
             .orderBy(orderBy, order)
             .startAfter(last.data()[orderBy])

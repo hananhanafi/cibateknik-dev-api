@@ -15,19 +15,7 @@ exports.addWishlist = async (request, response) => {
             }else{
                 listItemID = [];
                 listItemID.push(itemID);
-                
                 documentUserWishlist.update('listItemID',fieldValue.arrayUnion(...listItemID));
-
-                // const existListItemID = doc.data().listItemID;
-                // const isItemExistInTabel = existListItemID.find(item=>{return item.itemID == itemID});
-                
-                // if(isItemExistInTabel){
-                //     documentUserWishlist.update('itemList',fieldValue.arrayRemove(isItemExistInTabel));
-                // }
-
-                // if(newItemCart.amount>0){
-                //     documentUserWishlist.update('itemList',fieldValue.arrayUnion(...itemList));
-                // }
             }
         })
         
@@ -71,8 +59,6 @@ exports.getUserWishlist = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-
-
 }
 
 exports.getUserWishlistWithItem = async (request, response) => {
@@ -86,7 +72,9 @@ exports.getUserWishlistWithItem = async (request, response) => {
         if (!doc.exists) {
             return response.status(404).json({ message: 'Barang tidak ditemukan' })
         }else{
-            listItemID = doc.data().listItemID;
+            if(doc.data().listItemID && doc.data().listItemID.length>0){
+                listItemID = doc.data().listItemID;
+            }
         }
     })
     .catch((err) => {

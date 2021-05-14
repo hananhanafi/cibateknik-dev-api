@@ -89,8 +89,7 @@ exports.getAllUsers = async (request, response) => {
         data.forEach((doc) => {
             users.data.push({
                 userID: doc.id,
-                firstName: doc.data().firstName,
-                lastName: doc.data().lastName,
+                name: doc.data().name,
                 email: doc.data().email,
                 address: doc.data().address,
                 phoneNumber: doc.data().phoneNumber,
@@ -160,6 +159,40 @@ exports.loginUser = (request, response) => {
         })
 };
 
+exports.updatePasswordUser = async (request, response) => {
+    try 
+    {
+        var user = await firebase.auth().currentUser;
+        const providedPassword = request.body.password;
+        const newPassword = request.body.newPassword;
+
+        var credential = firebase.auth.EmailAuthProvider.credential(
+            firebase.auth().currentUser.email,
+            providedPassword
+        );
+
+        // Prompt the user to re-provide their sign-in credentials
+        user.reauthenticateWithCredential(credential).then(function() {
+            // User re-authenticated.
+            user.updatePassword(newPassword).then(function() {
+                // Update successful.
+                return response.status(200).json({message: 'Berhail memperbarui password' });
+            }).catch(function(error) {
+            // An error happened.
+                return response.status(500).json({message: 'Something went wrong' });
+            });
+        }).catch(function(error) {
+            // An error happened.
+            console.log("err",error);
+            return response.status(403).json({ error:error,message: 'Password lama salah!'});
+        });
+    } catch (error) {
+        console.error(error);
+        return response.status(500).json({message: 'Something went wrong' });
+    }
+};
+
+
 // logout
 exports.logoutUser = (request, response) => {
     firebase.auth().signOut().then(() => {
@@ -172,8 +205,7 @@ exports.logoutUser = (request, response) => {
 
 exports.signUpUser = async (request, response) => {
     const newUser = {
-        firstName: request.body.firstName,
-        lastName: request.body.lastName,
+        name: request.body.name,
         email: request.body.email,
         phoneNumber: request.body.phoneNumber,
         address: request.body.address,
@@ -187,8 +219,7 @@ exports.signUpUser = async (request, response) => {
 
 	if (!valid) return response.status(400).json(errors);
 
-    const fullName = newUser.firstName + " " + newUser.lastName;
-    const searchKeywordsArray = await createSubstringArray(fullName);
+    const searchKeywordsArray = await createSubstringArray(newUser.name);
     newUser.searchKeywordsArray = searchKeywordsArray;
 
 
@@ -206,8 +237,7 @@ exports.signUpUser = async (request, response) => {
     .then((idtoken) => {
         token = idtoken;
         const userCredentials = {
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
+            name: newUser.name,
             phoneNumber: newUser.phoneNumber,
             address: newUser.address,
             email: newUser.email,
@@ -341,6 +371,25 @@ exports.getUserDetail = async (request, response) => {
 		});
 }
 
+exports.adminGetUserDetail = async (request, response) => {
+    let userData = {
+        data: null
+    };
+	db
+		.doc(`/users/${request.params.userID}`)
+		.get()
+		.then((doc) => {
+			if (doc.exists) {
+                userData.data = doc.data();
+                return response.json(userData);
+			}	
+		})
+		.catch((error) => {
+			console.error(error);
+			return response.status(500).json({ error: error.code });
+		});
+}
+
 exports.updateUserDetails = async (request, response) => {
 
     
@@ -354,8 +403,7 @@ exports.updateUserDetails = async (request, response) => {
     var user = firebase.auth().currentUser;
 
         
-    const fullName = updateItem.firstName + " " + updateItem.lastName;
-    const searchKeywordsArray = await createSubstringArray(fullName);
+    const searchKeywordsArray = await createSubstringArray(updateItem.name);
     updateItem.searchKeywordsArray = searchKeywordsArray;
 
     if(updateItem.email){

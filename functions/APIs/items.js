@@ -612,9 +612,9 @@ exports.updateStock = async (request, response) => {
         return response.status(400).json({ year: 'Must not be empty' });
     }
     
-    const date = requestBody.date;
-    const month = requestBody.month;
-    const year = requestBody.year;
+    const date = parseInt(requestBody.date);
+    const month = parseInt(requestBody.month);
+    const year = parseInt(requestBody.year);
     const requestStockIn = parseInt(requestBody.in);
     const requestStockOut = parseInt(requestBody.out);
     const requestTotalStock = parseInt(requestStockIn) - parseInt(requestStockOut);
@@ -759,11 +759,12 @@ exports.updateStock = async (request, response) => {
         }
 
         let updateHistoryItem = {
-            note: requestBody.note,
+            description: requestBody.description,
             type: 'stock update',
             createdAt: dateNow,
             updatedAt: dateNow,
             data: {
+                productID: request.params.productID,
                 itemID: request.params.itemID,
                 date: date,
                 month: month,
@@ -799,6 +800,17 @@ exports.updateStock = async (request, response) => {
         });
         
         await db.collection('items_history').add(updateHistoryItem)
+        .then(()=> {
+            return;
+        })
+        .catch((err) => {
+            console.error(err);
+            return response.status(500).json({ 
+                    error: err.code 
+            });
+        });
+        
+        await db.collection('items_posted').doc(request.params.itemID).update(updateItem)
         .then(()=> {
             return;
         })

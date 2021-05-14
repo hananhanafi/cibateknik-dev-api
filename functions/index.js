@@ -17,7 +17,7 @@ app.post('/admin/login', loginAdmin);
 app.post('/admin/signup', signUpAdmin);
 
 
-const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword, getAllUsers, getToken, logoutUser} = require('./APIs/users');
+const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword, getAllUsers, getToken, logoutUser, updatePasswordUser, adminGetUserDetail} = require('./APIs/users');
 //user
 app.post('/user/signup', signUpUser);
 app.post('/user/login', loginUser);
@@ -28,8 +28,10 @@ app.post('/user/image', auth, uploadProfilePhoto);
 app.get('/user', auth, getUserDetail);
 app.put('/user', auth, updateUserDetails);
 app.get('/user/token', auth, getToken);
+app.post('/user/password/update', auth, updatePasswordUser);
 
 app.get('/users', auth_admin, getAllUsers);
+app.get('/admin/data/user/:userID', auth_admin, adminGetUserDetail);
 
 //admin products
 const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');
@@ -80,7 +82,7 @@ app.put('/product/:productID/item/:itemID', auth_admin, editItem);
 app.delete('/product/:productID/item/:itemID', auth_admin, deleteItem);
 
 app.post('/product/:productID/item/:itemID/stock/monthly', auth_admin, updateMonthlyStock);
-app.post('/product/:productID/item/:itemID/stock/update', auth_admin, updateStock);
+app.post('/product/:productID/item/:itemID/stock/update', updateStock);
 
 const { getAllItemsPosted, getAllItemsPostedByProduct, getOneItemPosted, addPostedItem, deletePostedItem, updatePostedItem} = require('./APIs/items_posted');
 app.post('/product/:productID/item/:itemID/post',auth_admin, addPostedItem);
@@ -127,6 +129,19 @@ const { getAllAdminMessages, postOneadminMessage, deleteOneAdminMessage } = requ
 app.get('/admin/messages', auth_admin, getAllAdminMessages);
 app.post('/user/admin-message/send',postOneadminMessage);
 app.delete('/user/admin-message/delete/:messageID',deleteOneAdminMessage);
+
+const { getDataCityPronvice, getShipmentCost } = require('./APIs/rajaongkir');
+app.get('/rajaongkir/data/city-and-province', getDataCityPronvice);
+app.get('/rajaongkir/cost', getShipmentCost);
+
+
+const { createInvoice, updateInvoice, getUserOrder, getAllUsersOrder, updateStatusOrder } = require('./APIs/xendit');
+app.post('/user/checkout/invoice/create/:userID', auth, createInvoice);
+// app.post('/user/checkout/invoice/update', updateInvoice);
+app.get('/user/order/:userID', auth, getUserOrder);
+app.get('/admin/users-order', auth_admin, getAllUsersOrder);
+app.get('/admin/user-order/:userID', auth_admin, getUserOrder);
+app.post('/admin/users-order/status/update/:orderID', auth_admin, updateStatusOrder);
 
 app.post('/item/sold',auth_admin, updateSoldItem);
 app.delete('/item/sold/delete',auth_admin, deleteSoldItem);

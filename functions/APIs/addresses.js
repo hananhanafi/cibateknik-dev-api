@@ -1,4 +1,4 @@
-const { db, fieldValue, firebase } = require('../util/admin');
+const { db } = require('../util/admin');
 const { validateEmptyData } = require('../util/validators');
 
 exports.createUserAddress = async (request, response) => {
@@ -9,6 +9,7 @@ exports.createUserAddress = async (request, response) => {
             label: request.body.label,
             name: request.body.name,
             phone: request.body.phone,
+            province: request.body.province,
             city: request.body.city,
             zipCode: request.body.zipCode,
             address: request.body.address,
@@ -82,6 +83,7 @@ exports.getUserAddresses = async (request, response) => {
                 label: doc.data().label,
                 name: doc.data().name,
                 phone: doc.data().phone,
+                province: doc.data().province,
                 city: doc.data().city,
                 zipCode: doc.data().zipCode,
                 address: doc.data().address,
@@ -131,7 +133,6 @@ exports.editUserAddress = async (request, response) => {
                 error: err 
         });
     });
-
 }
 
 exports.updateMainAddress = async (request, response) => {
@@ -139,7 +140,6 @@ exports.updateMainAddress = async (request, response) => {
     const addressID = request.params.addressID;
     
     const collectionUserAddress = db.collection('users').doc(userID).collection('addresses').where('isMainAddress','==',true)
-
     
     const snapsotCollectionUserAddress = await collectionUserAddress.get();
     const userMainAddress = snapsotCollectionUserAddress.docs.length;
@@ -155,7 +155,6 @@ exports.updateMainAddress = async (request, response) => {
             });
         })
     }
-    
     
     let document = db.collection('users').doc(userID).collection('addresses').doc(`${addressID}`);
     
