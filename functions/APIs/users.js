@@ -94,7 +94,7 @@ exports.getAllUsers = async (request, response) => {
                 address: doc.data().address,
                 phoneNumber: doc.data().phoneNumber,
                 dateOfBirth: doc.data().dateOfBirth,
-                imageUrl: doc.data().imageUrl,
+                photoURL: doc.data().photoURL,
                 createdAt: doc.data().createdAt,
                 updatedAt: doc.data().updatedAt,
                 lastLogin: doc.data().lastLogin || doc.data().updatedAt,
@@ -176,7 +176,7 @@ exports.updatePasswordUser = async (request, response) => {
             // User re-authenticated.
             user.updatePassword(newPassword).then(function() {
                 // Update successful.
-                return response.status(200).json({message: 'Berhail memperbarui password' });
+                return response.status(200).json({message: 'Berhasil memperbarui password' });
             }).catch(function(error) {
             // An error happened.
                 return response.status(500).json({message: 'Something went wrong' });
@@ -191,6 +191,7 @@ exports.updatePasswordUser = async (request, response) => {
         return response.status(500).json({message: 'Something went wrong' });
     }
 };
+
 
 
 // logout
@@ -273,6 +274,55 @@ exports.signUpUser = async (request, response) => {
     });
 }
 
+exports.googleSignIn = async (request, response) => {
+    const dateNow = new Date();
+    const newUser = {
+        userID: request.params.userID,
+        name: request.body.name,
+        email: request.body.email,
+        phoneNumber: request.body.phoneNumber,
+        photoURL: request.body.photoURL,
+        address: '',
+        createdAt: dateNow,
+        updatedAt: dateNow,
+    };
+
+    // const { valid, errors } = validateSignUpData(newUser);
+
+	// if (!valid) return response.status(400).json(errors);
+
+    const searchKeywordsArray = await createSubstringArray(newUser.name);
+    newUser.searchKeywordsArray = searchKeywordsArray;
+
+    newUser.searchKeywordsArray = searchKeywordsArray;
+
+	await db
+		.doc(`/users/${newUser.userID}`)
+		.get()
+		.then((doc) => {
+			if (!doc.exists) {
+                //create user doc
+                db
+                .doc(`/users/${newUser.userID}`)
+                .set(newUser);
+
+            }else {
+                db.collection('users').doc(`${newUser.userID}`).update({lastLogin:dateNow})
+            }
+		})
+		.catch((error) => {
+			console.error(error);
+			return response.status(500).json({ error: error.code });
+		});
+
+    try{
+        return response.status(200).json({message: 'Berhasil masuk dengan google' });
+    
+    }catch (error){
+        return response.status(500).json({ general: 'Something went wrong, please try again' });
+    }
+}
+
 deleteImage = (imageName) => {
     const bucket = admin.storage().bucket();
     const path = `${imageName}`
@@ -325,10 +375,10 @@ exports.uploadProfilePhoto = async (request, response) => {
 				}
 			})
 			.then(() => {
-				const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${imageFileName}?alt=media`;
+				const photoURL = `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${imageFileName}?alt=media`;
 
 				return db.doc(`/users/${request.user.uid}`).update({
-					imageUrl
+					photoURL
 				});
 			})
 			.then(() => {
@@ -349,11 +399,11 @@ exports.getUserDetail = async (request, response) => {
 
     let isVerified = false;
 
-    try {
-        isVerified = await firebase.auth().currentUser.emailVerified;
-    }catch (error){
-        return response.status(500).json({ message: 'Something went wrong, please try again' });
-    }
+    // try {
+    //     isVerified = await firebase.auth().currentUser.emailVerified;
+    // }catch (error){
+    //     return response.status(500).json({ message: 'Something went wrong, please try again' });
+    // }
 
 	db
 		.doc(`/users/${request.user.uid}`)
