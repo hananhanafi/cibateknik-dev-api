@@ -63,3 +63,8 @@ exports.createSubTextArray = (text) => {
 
     return uniqueArray;
 }
+
+
+exports.toFormatedNumber = (num) => {
+	return String(num).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};

@@ -17,6 +17,18 @@ app.post('/admin/login', loginAdmin);
 app.post('/admin/signup', signUpAdmin);
 
 
+const { getAllAdminNotifications, postOneadminNotification, deleteOneAdminNotification, getAdminUnreadNotifications, adminNotificationSetRead, adminAllNotificationSetRead } = require('./APIs/admin_notifications');
+app.get('/admin/notifications', auth_admin, getAllAdminNotifications);
+app.get('/admin/unread-notifications', auth_admin, getAdminUnreadNotifications);
+app.post('/user/admin-notification/send',postOneadminNotification);
+app.delete('/user/admin-notification/delete/:notificationID',deleteOneAdminNotification);
+app.post('/admin/notification/:notificationID/read', auth_admin, adminNotificationSetRead);
+app.post('/admin/notification/read', auth_admin, adminAllNotificationSetRead);
+
+
+
+
+
 const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetails, sendVerificationEmail, sendEmailResetPassword, getAllUsers, getToken, logoutUser, updatePasswordUser, adminGetUserDetail, googleSignIn} = require('./APIs/users');
 //user
 app.post('/user/signin/google/:userID', googleSignIn);
@@ -33,6 +45,15 @@ app.post('/user/password/update', auth, updatePasswordUser);
 
 app.get('/users', auth_admin, getAllUsers);
 app.get('/admin/data/user/:userID', auth_admin, adminGetUserDetail);
+
+
+const { getUserNotifications, getUserUnreadNotifications, userNotificationSetRead, userAllNotificationSetRead, deleteOneUserNotification } = require('./APIs/user_notifications');
+app.get('/user/notifications/:userID', auth, getUserNotifications);
+app.get('/user/unread-notifications/:userID', auth, getUserUnreadNotifications);
+app.post('/user/:userID/notification/:notificationID/read', auth, userNotificationSetRead);
+app.post('/user/:userID/notification/read', auth, userAllNotificationSetRead);
+
+app.delete('/user/:userID/notification/delete/:notificationID',deleteOneUserNotification);
 
 //admin products
 const {getAllProducts,postOneProduct, deleteProduct, editProduct, getOneProduct} = require('./APIs/products');
@@ -71,7 +92,7 @@ app.put('/category/:categoryID',auth_admin, editCategory);
 //end admin categories
 
 //admin items
-const { postOneItem, getAllItemsByProduct, getOneItem, deleteItem, editItem, updateSoldItem, deleteSoldItem, updateMonthlyStock, updateStock, uploadImage, deleteItemImage, getAllDataItems } = require('./APIs/items');
+const { postOneItem, getAllItemsByProduct, getOneItem, deleteItem, editItem, updateMonthlyStock, updateStock, uploadImage, deleteItemImage, getAllDataItems } = require('./APIs/items');
 app.get('/product/:productID/items', getAllItemsByProduct);
 app.get('/product/:productID/data/items', getAllDataItems);
 app.get('/product/:productID/item/:itemID', getOneItem);
@@ -126,10 +147,6 @@ app.put('/user/address/:addressID', auth,editUserAddress );
 app.delete('/user/address/:addressID', auth, deleteUserAddress);
 app.post('/user/main-address/update/:addressID', auth, updateMainAddress);
 
-const { getAllAdminMessages, postOneadminMessage, deleteOneAdminMessage } = require('./APIs/admin_messages');
-app.get('/admin/messages', auth_admin, getAllAdminMessages);
-app.post('/user/admin-message/send',postOneadminMessage);
-app.delete('/user/admin-message/delete/:messageID',deleteOneAdminMessage);
 
 const { getDataCityPronvice, getShipmentCost } = require('./APIs/rajaongkir');
 app.get('/rajaongkir/data/city-and-province', getDataCityPronvice);
@@ -138,14 +155,14 @@ app.get('/rajaongkir/cost', getShipmentCost);
 
 const { createInvoice, updateInvoice, getUserOrder, getAllUsersOrder, updateStatusOrder } = require('./APIs/xendit');
 app.post('/user/checkout/invoice/create/:userID', auth, createInvoice);
-// app.post('/user/checkout/invoice/update', updateInvoice);
+app.post('/user/checkout/invoice/update', updateInvoice);
 app.get('/user/order/:userID', auth, getUserOrder);
 app.get('/admin/users-order', auth_admin, getAllUsersOrder);
 app.get('/admin/user-order/:userID', auth_admin, getUserOrder);
 app.post('/admin/users-order/status/update/:orderID', auth_admin, updateStatusOrder);
 
-app.post('/item/sold',auth_admin, updateSoldItem);
-app.delete('/item/sold/delete',auth_admin, deleteSoldItem);
+// app.post('/item/sold',auth_admin, updateSoldItem);
+// app.delete('/item/sold/delete',auth_admin, deleteSoldItem);
 
 //end admin items
 

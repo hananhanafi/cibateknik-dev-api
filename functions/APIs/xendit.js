@@ -1,5 +1,6 @@
 const { validateEmptyData } = require("../util/validators");
 const { db, fieldValue } = require('../util/admin');
+const { toFormatedNumber } = require('../util/helpers');
 
 exports.createInvoice = async (request, response) => {
     try {
@@ -68,12 +69,45 @@ exports.createInvoice = async (request, response) => {
         const documentUserOrder = collectionUsersOrder.doc(responseOrder.id);
         if(resp){
             newOrder.invoice = resp;
-            const itemOrderInCart = newOrder.detailOrder.items.map(item=>{return item.cart});
-            const documentUserCart = db.collection('users_cart').doc(userID)
-            documentUserCart.update('itemList',fieldValue.arrayRemove(...itemOrderInCart));
+            // const itemOrderInCart = newOrder.detailOrder.items.map(item=>{return item.cart});
+            // const documentUserCart = db.collection('users_cart').doc(userID)
+            // documentUserCart.update('itemList',fieldValue.arrayRemove(...itemOrderInCart));
 
             documentUserOrder.update(newOrder)
-            .then((doc)=>{
+            .then( async (doc)=>{
+
+                const newNotif = {
+                    createdAt: dateNow,
+                    updatedAt: dateNow,
+                    notification_type: 'order',
+                    title: "Memesan Barang",
+                    description: `Anda telah memesan barang dengan total tagihan sebesar Rp ${toFormatedNumber(amount)}, silahkan bayar pesanan Anda sebelum Invoice expired. Untuk mengecek pesanan anda dapat dilihat di menu Profil > Pesanan Saya.`,
+                    data: newOrder,
+                    isRead: false,
+                }
+                
+                await db.collection('users').doc(userID).collection('notifications').add(newNotif)
+                .then(()=>{
+                    return;
+                })
+                .catch((err) => {
+                    response.status(500).json({ error: 'Something went wrong' });
+                    console.error(err);
+                });
+
+                
+
+                const newAdminNotif = {
+                    createdAt: dateNow,
+                    updatedAt: dateNow,
+                    notification_type: 'user_order',
+                    title: "Pemesanan Barang",
+                    description: `Customer atas nama ${newOrder.address.name} telah memesan barang dengan jumlah tagihan sebesar Rp ${toFormatedNumber(amount)}. Untuk mengetahui rincian pesanan customer dapat dilihat pada Dashboard > Daftar Pesanan.`,
+                    data: newOrder,
+                    isRead: false,
+                }
+                await db.collection('admin_notifications').add(newAdminNotif);
+                
                 newOrder.id = doc.id;
                 return response.json({message: 'Checkout successfully',data:newOrder});
             })
@@ -99,7 +133,7 @@ exports.getUserOrder = async (request, response) => {
     const userID = request.params.userID || request.user.uid;
 
     const queryRequest = request.query;
-    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 2;
+    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 10;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     
     //query get all data for counting total data
@@ -179,7 +213,7 @@ exports.updateInvoice = async (request, response) => {
         const dateNow = new Date();
 
         var orderItems = [];
-
+        var userID, dataOrder;
         await db.collection('users_order')
         .where('invoice.id','==',invoice_id)
         .orderBy('createdAt', 'desc')
@@ -187,12 +221,16 @@ exports.updateInvoice = async (request, response) => {
         .then((docs)=>{
             docs.forEach(doc=>{
                 db.collection('users_order').doc(doc.id).update(updateOrder);
-
+                userID = doc.data().userID;
                 orderItems = doc.data().detailOrder.items;
+                dataOrder = {
+                    ...doc.data(),
+                    ...updateOrder,
+                }
             })
         })
 
-        if(update.statusOrder !== 'EXPIRED'){
+        if(updateOrder.statusOrder !== 'EXPIRED'){
             const promises = [];
             orderItems.forEach(item=>{
                 promises.push(
@@ -227,6 +265,44 @@ exports.updateInvoice = async (request, response) => {
             
             try {
                 await Promise.all(promises);
+                const newNotif = {
+                    createdAt: dateNow,
+                    updatedAt: dateNow,
+                    notification_type: 'order',
+                    title: "Pesanan Dibayar",
+                    description: `Anda telah membayar pesanan, mohon ditunggu barang sedang dikemas dan akan segera dikirim.`,
+                    data: dataOrder,
+                    isRead: false,
+                }
+                
+                await db.collection('users').doc(userID).collection('notifications').add(newNotif)
+                .then(()=>{
+                    return;
+                })
+                .catch((err) => {
+                    response.status(500).json({ error: 'Something went wrong' });
+                    console.error(err);
+                });
+                
+                const newAdminNotif = {
+                    createdAt: dateNow,
+                    updatedAt: dateNow,
+                    notification_type: 'user_order',
+                    title: "Pesanan Dibayar",
+                    description: `Customer atas nama ${dataOrder.address.name} telah membayar pesanan dengan tagihan sebesar ${toFormatedNumber(dataOrder.amount)}, segera lakukan pengemasan dan pengiriman sesuai dengan alamant yang tertera di rincian pesanan. Untuk mengetahui rincian pesanan customer dapat dilihat pada Dashboard > Daftar Pesanan.`,
+                    data: dataOrder,
+                    isRead: false,
+                }
+                
+                await db.collection('admin_notifications').add(newAdminNotif)
+                .then(()=>{
+                    return;
+                })
+                .catch((err) => {
+                    response.status(500).json({ error: 'Something went wrong' });
+                    console.error(err);
+                });
+
                 return response.json({message: 'Callback successfully'});
             } 
             catch (error) {
@@ -318,7 +394,7 @@ exports.getAllUsersOrder = async (request, response) => {
 
 exports.updateStatusOrder = async (request, response) => {
     try {
-
+        const dateNow = new Date();
         const orderID = request.params.orderID;
         const receiptNumber = request.body.receiptNumber;
         const statusOrder = request.body.statusOrder;
@@ -335,8 +411,46 @@ exports.updateStatusOrder = async (request, response) => {
                 statusOrder
             }
         }
+        let dataOrder,userID;
+        await db.collection('users_order').doc(orderID).get()
+        .then((doc)=>{
+            dataOrder = {
+                id: doc.id,
+                ...doc.data()
+            };
+            
+            userID = doc.data().userID;
+        })
+        console.log("DAORd",dataOrder);
         
-        db.collection('users_order').doc(orderID).update(updateOrder);
+        db.collection('users_order').doc(orderID).update(updateOrder)
+        .then(async(doc)=>{
+            let newNotif;
+            if(statusOrder == 'SHIPPING'){
+                newNotif = {
+                    createdAt: dateNow,
+                    updatedAt: dateNow,
+                    notification_type: 'order',
+                    title: "Pesanan Dikirim",
+                    description: `Pesanan Anda telah dikirim menggunakan jasa pengiriman ${dataOrder.shipment.courier.label} dengan estimasi ${ dataOrder.shipment.cost[0].etd.includes("HARI") || dataOrder.shipment.cost[0].etd.includes("Hari") || dataOrder.shipment.cost[0].etd.includes("hari")  ? dataOrder.shipment.cost[0].etd : dataOrder.shipment.cost[0].etd + " Hari" }.Apabila barang telah diterima mohon konfirmasi dengan menyelesaikan pesanan ini. Untuk mengecek pesanan anda dapat dilihat di menu Profil > Pesanan Saya.`,
+                    data: dataOrder,
+                    isRead: false,
+                }
+            }else{
+                newNotif = {
+                    createdAt: dateNow,
+                    updatedAt: dateNow,
+                    notification_type: 'order',
+                    title: "Pesanan Dikirim",
+                    description: `Pesanan Anda telah diselesaikan oleh Admin.`,
+                    data: dataOrder,
+                    isRead: false,
+                }
+                
+            }
+            console.log("NEWNOTIF",newNotif);
+            await db.collection('users').doc(userID).collection('notifications').add(newNotif)
+        });
 
         return response.json({message: 'Update successfully'});
             
