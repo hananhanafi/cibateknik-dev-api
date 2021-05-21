@@ -760,7 +760,7 @@ exports.updateStock = async (request, response) => {
 
         let updateHistoryItem = {
             description: requestBody.description,
-            type: 'stock update',
+            type: requestBody.type || 'stock update',
             createdAt: dateNow,
             updatedAt: dateNow,
             data: {
@@ -770,8 +770,8 @@ exports.updateStock = async (request, response) => {
                 month: month,
                 month_name:monthNames[month-1],
                 year: year,
-                in: currentStock.dailyIn + requestStockIn,
-                out: currentStock.dailyOut + requestStockOut,
+                in: requestStockIn,
+                out: requestStockOut,
             }
             
         }

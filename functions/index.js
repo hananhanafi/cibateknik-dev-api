@@ -25,7 +25,12 @@ app.delete('/user/admin-notification/delete/:notificationID',deleteOneAdminNotif
 app.post('/admin/notification/:notificationID/read', auth_admin, adminNotificationSetRead);
 app.post('/admin/notification/read', auth_admin, adminAllNotificationSetRead);
 
-
+const { getTotalData, getTodayData, getPaidOrderByRangeDate, getTopSellingItem, getOrderByRangeDate } = require('./APIs/admin_dashboard');
+app.get('/admin/data/total',auth_admin, getTotalData);
+app.get('/admin/data/today',auth_admin, getTodayData);
+app.get('/admin/data/paid-order/by/date',auth_admin, getPaidOrderByRangeDate);
+app.get('/admin/data/order/by/date',auth_admin, getOrderByRangeDate);
+app.get('/admin/data/top-selling-item',auth_admin, getTopSellingItem);
 
 
 
@@ -34,7 +39,7 @@ const {loginUser, signUpUser, uploadProfilePhoto, getUserDetail, updateUserDetai
 app.post('/user/signin/google/:userID', googleSignIn);
 app.post('/user/signup', signUpUser);
 app.post('/user/login', loginUser);
-app.post('/user/logout', logoutUser);
+app.post('/user/logout/:userID', logoutUser);
 app.post('/user/sendemailverivication', auth, sendVerificationEmail);
 app.post('/user/resetpassword', sendEmailResetPassword);
 app.post('/user/image', auth, uploadProfilePhoto);

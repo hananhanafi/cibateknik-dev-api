@@ -146,7 +146,7 @@ exports.loginUser = (request, response) => {
             // }
 
             
-            db.collection('users').doc(`${data.user.uid}`).update({lastLogin:new Date()})
+            db.collection('users').doc(`${data.user.uid}`).update({lastLogin:new Date(),isLogin:true});
             // return data.user.getIdToken(true);
             return data.user.getIdTokenResult(true);
         })
@@ -196,8 +196,12 @@ exports.updatePasswordUser = async (request, response) => {
 
 // logout
 exports.logoutUser = (request, response) => {
+    const userID = request.params.userID || request.user.uid;
     firebase.auth().signOut().then(() => {
     // Sign-out successful.
+    
+    db.collection('users').doc(`${userID}`).update({isLogin:false});
+    return response.json({message:'Berhasil logout'});
     }).catch((error) => {
     // An error happened.
         return response.status(403).json({ error:error,message: 'wrong credentials, please try again'});
@@ -307,7 +311,7 @@ exports.googleSignIn = async (request, response) => {
                 .set(newUser);
 
             }else {
-                db.collection('users').doc(`${newUser.userID}`).update({lastLogin:dateNow})
+                db.collection('users').doc(`${newUser.userID}`).update({lastLogin:dateNow,isLogin:true})
             }
 		})
 		.catch((error) => {

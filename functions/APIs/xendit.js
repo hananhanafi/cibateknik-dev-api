@@ -14,6 +14,7 @@ exports.createInvoice = async (request, response) => {
 
         const detailOrder = {
             items: requestBody.items,
+            totalItemsOrder: requestBody.totalItemsOrder, 
             totalItemsWeight: requestBody.totalItemsWeight, 
             totalItemsPrice: requestBody.totalItemsPrice,
         }
@@ -68,10 +69,11 @@ exports.createInvoice = async (request, response) => {
 
         const documentUserOrder = collectionUsersOrder.doc(responseOrder.id);
         if(resp){
+
             newOrder.invoice = resp;
-            // const itemOrderInCart = newOrder.detailOrder.items.map(item=>{return item.cart});
-            // const documentUserCart = db.collection('users_cart').doc(userID)
-            // documentUserCart.update('itemList',fieldValue.arrayRemove(...itemOrderInCart));
+            const itemOrderInCart = newOrder.detailOrder.items.map(item=>{return item.cart});
+            const documentUserCart = db.collection('users_cart').doc(userID)
+            documentUserCart.update('itemList',fieldValue.arrayRemove(...itemOrderInCart));
 
             documentUserOrder.update(newOrder)
             .then( async (doc)=>{
@@ -108,8 +110,51 @@ exports.createInvoice = async (request, response) => {
                 }
                 await db.collection('admin_notifications').add(newAdminNotif);
                 
-                newOrder.id = doc.id;
-                return response.json({message: 'Checkout successfully',data:newOrder});
+
+                
+                const promises = [];
+                const orderedItems = newOrder.detailOrder.items;
+                orderedItems.forEach(item=>{
+                    console.log("ORDERING",item);
+                    promises.push(
+                        new Promise((resolve, reject) => {
+                            var request = require("request");
+                
+                            var options = {
+                                method: 'POST',
+                                url: `https://us-central1-cibateknik-dev-api.cloudfunctions.net/api/product/${item.item.productID}/item/${item.item.itemID}/stock/update`,
+                                headers: {'content-type': 'application/x-www-form-urlencoded'},
+                                form: {
+                                    out: item.cart.amount,
+                                    in: 0,
+                                    description: "Barang dipesan",
+                                    type: 'order',
+                                    date : dateNow.getDate(),
+                                    month: dateNow.getMonth()+1,
+                                    year: dateNow.getFullYear(),
+                                }
+                            };
+                
+                            request(options, function (error, response, body) {
+                                if (error) throw new Error(error);
+                                result = JSON.parse(body); 
+                                
+                                resolve(result);
+                            });
+                            
+                        })
+                    )
+                })
+                try {
+                    await Promise.all(promises);
+                    newOrder.id = doc.id;
+                    return response.json({message: 'Checkout successfully',data:newOrder});
+                } 
+                catch (error) {
+                    console.error("error ni",error);
+                    return response.status(500).json({ error: error });
+                }
+
             })
             .catch((err) => {
                 response.status(500).json({ message: 'Checkout error' });
@@ -206,11 +251,17 @@ exports.getUserOrder = async (request, response) => {
 exports.updateInvoice = async (request, response) => {
     try {
         const invoice_id = request.body.id;
+        const dateNow = new Date();
         const updateOrder = {
             invoice: request.body,
             statusOrder: request.body.status === 'EXPIRED' ? 'EXPIRED' : 'PACKING',
+            updatedAt: dateNow
         }
-        const dateNow = new Date();
+
+        if(request.body.status === 'PAID'){
+            updateOrder.isPaid = true;
+            updateOrder.paidAt = dateNow;
+        }
 
         var orderItems = [];
         var userID, dataOrder;
@@ -224,6 +275,7 @@ exports.updateInvoice = async (request, response) => {
                 userID = doc.data().userID;
                 orderItems = doc.data().detailOrder.items;
                 dataOrder = {
+                    id : doc.id,
                     ...doc.data(),
                     ...updateOrder,
                 }
@@ -231,40 +283,21 @@ exports.updateInvoice = async (request, response) => {
         })
 
         if(updateOrder.statusOrder !== 'EXPIRED'){
-            const promises = [];
-            orderItems.forEach(item=>{
-                promises.push(
-                    new Promise((resolve, reject) => {
-                        var request = require("request");
-            
-                        var options = {
-                            method: 'POST',
-                            url: `https://us-central1-cibateknik-dev-api.cloudfunctions.net/api/product/${item.item.productID}/item/${item.item.itemID}/stock/update`,
-                            headers: {'content-type': 'application/x-www-form-urlencoded'},
-                            form: {
-                                out: item.cart.amount,
-                                in: 0,
-                                description: "Barang terjual",
-                                date : dateNow.getDate(),
-                                month: dateNow.getMonth()+1,
-                                year: dateNow.getFullYear(),
-                            }
-                        };
-            
-                        request(options, function (error, response, body) {
-                            if (error) throw new Error(error);
-                            result = JSON.parse(body); 
-                            
-                            resolve(result);
-                        });
-                        
-                    })
-                )
-            })
-
             
             try {
-                await Promise.all(promises);
+                orderItems.forEach(item=>{
+                    db.collection('items_posted').doc(`${item.cart.itemID}`).get()
+                    .then((doc)=>{
+                        let currentItemSold;
+                        if(doc.data().itemSold){
+                            currentItemSold = parseInt(doc.data().itemSold) + parseInt(item.cart.amount);
+                        }else{
+                            currentItemSold = parseInt(item.cart.amount);
+                        }
+                        db.collection('items_posted').doc(`${item.cart.itemID}`).update({itemSold:currentItemSold});
+                    });
+                })
+
                 const newNotif = {
                     createdAt: dateNow,
                     updatedAt: dateNow,
@@ -310,7 +343,66 @@ exports.updateInvoice = async (request, response) => {
                 return response.status(500).json({ error: error });
             }
         }else {
-            return response.json({message: 'Callback successfully'});
+
+            const promises = [];
+            orderItems.forEach(item=>{
+                promises.push(
+                    new Promise((resolve, reject) => {
+                        var request = require("request");
+            
+                        var options = {
+                            method: 'POST',
+                            url: `https://us-central1-cibateknik-dev-api.cloudfunctions.net/api/product/${item.item.productID}/item/${item.item.itemID}/stock/update`,
+                            headers: {'content-type': 'application/x-www-form-urlencoded'},
+                            form: {
+                                out: 0,
+                                in: item.cart.amount,
+                                description: "Pesanan expired",
+                                type: 'order',
+                                date : dateNow.getDate(),
+                                month: dateNow.getMonth()+1,
+                                year: dateNow.getFullYear(),
+                            }
+                        };
+            
+                        request(options, function (error, response, body) {
+                            if (error) throw new Error(error);
+                            result = JSON.parse(body); 
+                            
+                            resolve(result);
+                        });
+                        
+                    })
+                )
+            })
+
+            try {
+                await Promise.all(promises);
+
+                const newNotif = {
+                    createdAt: dateNow,
+                    updatedAt: dateNow,
+                    notification_type: 'order',
+                    title: "Pesanan Expired",
+                    description: `Pesanan Anda telah expired, mohon melakukan pemesanan ulang.`,
+                    data: dataOrder,
+                    isRead: false,
+                }
+                
+                await db.collection('users').doc(userID).collection('notifications').add(newNotif)
+                .then(()=>{
+                    return;
+                })
+                .catch((err) => {
+                    response.status(500).json({ error: 'Something went wrong' });
+                    console.error(err);
+                });
+                return response.json({message: 'Callback successfully'});
+            } 
+            catch (error) {
+                console.error("error ni",error);
+                return response.status(500).json({ error: error });
+            }
         }
 
             
@@ -363,19 +455,43 @@ exports.getAllUsersOrder = async (request, response) => {
         last_index = first_index + snapshot.docs.length-1;
     }
 
+    
+    let userOrders={
+        data:[],
+        meta: {
+            first_index: first_index,
+            last_index: last_index,
+            current_page: parseInt(current_page),
+            first_page: first_page,
+            last_page: last_page,
+            total: total,
+        },
+        total: {
+            pending:0,
+            packing:0,
+            shipping:0,
+            done:0,
+            expired:0
+        }
+    };
+
+    const snapshotPending = await db.collection('users_order').where('statusOrder','==','PENDING').get();
+    userOrders.total.pending = snapshotPending.docs.length;
+
+    const snapshotPacking = await db.collection('users_order').where('statusOrder','==','PACKING').get();
+    userOrders.total.packing = snapshotPacking.docs.length;
+    
+    const snapshotShipping = await db.collection('users_order').where('statusOrder','==','SHIPPING').get();
+    userOrders.total.shipping = snapshotShipping.docs.length;
+
+    const snapshotDone = await db.collection('users_order').where('statusOrder','==','DONE').get()
+    userOrders.total.done = snapshotDone.docs.length;
+
+    const snapshotExpired = await db.collection('users_order').where('statusOrder','==','EXPIRED').get();
+    userOrders.total.expired = snapshotExpired.docs.length;
     queryGetData.get()
     .then((docs)=>{
-        let userOrders={
-            data:[],
-            meta: {
-                first_index: first_index,
-                last_index: last_index,
-                current_page: parseInt(current_page),
-                first_page: first_page,
-                last_page: last_page,
-                total: total,
-            }
-        };
+        console.log("AD");
         docs.forEach(doc=>{
             userOrders.data.push({
                 id:doc.id,
@@ -404,11 +520,13 @@ exports.updateStatusOrder = async (request, response) => {
         if(statusOrder == 'SHIPPING'){
             updateOrder = {
                 statusOrder,
-                receiptNumber
+                receiptNumber,
+                updatedAt: dateNow,
             }
         }else{
             updateOrder = {
-                statusOrder
+                statusOrder,
+                updatedAt: dateNow,
             }
         }
         let dataOrder,userID;
@@ -416,12 +534,12 @@ exports.updateStatusOrder = async (request, response) => {
         .then((doc)=>{
             dataOrder = {
                 id: doc.id,
-                ...doc.data()
+                ...doc.data(),
+                ...updateOrder
             };
             
             userID = doc.data().userID;
         })
-        console.log("DAORd",dataOrder);
         
         db.collection('users_order').doc(orderID).update(updateOrder)
         .then(async(doc)=>{
@@ -441,7 +559,7 @@ exports.updateStatusOrder = async (request, response) => {
                     createdAt: dateNow,
                     updatedAt: dateNow,
                     notification_type: 'order',
-                    title: "Pesanan Dikirim",
+                    title: "Pesanan Selesai",
                     description: `Pesanan Anda telah diselesaikan oleh Admin.`,
                     data: dataOrder,
                     isRead: false,
