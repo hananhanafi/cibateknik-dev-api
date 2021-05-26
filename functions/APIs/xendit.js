@@ -579,3 +579,48 @@ exports.updateStatusOrder = async (request, response) => {
 
 }
 
+
+exports.doneOrder = async (request, response) => {
+    try {
+        const dateNow = new Date();
+        const orderID = request.params.orderID;
+        const statusOrder = request.body.statusOrder;
+
+        const  updateOrder = {
+            statusOrder,
+            updatedAt: dateNow,
+        }
+
+        let dataOrder;
+        await db.collection('users_order').doc(orderID).get()
+        .then((doc)=>{
+            dataOrder = {
+                id: doc.id,
+                ...doc.data(),
+                ...updateOrder
+            };
+        })
+        
+        db.collection('users_order').doc(orderID).update(updateOrder)
+        .then(async(doc)=>{
+            const newNotif = {
+                    createdAt: dateNow,
+                    updatedAt: dateNow,
+                    notification_type: 'order',
+                    title: "Pesanan Selesai",
+                    description: `Pesanan telah diterima oleh customer.`,
+                    data: dataOrder,
+                    isRead: false,
+                }
+            await db.collection('admin_notifications').add(newNotif)
+        });
+
+        return response.json({message: 'Update successfully',data:dataOrder});
+            
+    } catch (error) {
+        console.error(error);
+        return response.status(500).json({ error: error,message: 'Something went wrong' });
+    }
+
+}
+

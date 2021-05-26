@@ -630,21 +630,25 @@ exports.updateStock = async (request, response) => {
         dailyTotal: 0
     }
 
+    let isPosted = false;
+
     const dailyStockID = request.params.itemID + "-" + requestBody.year + "-" + requestBody.month + "-" + requestBody.date;
     const monthlyStockID = request.params.itemID + "-" + requestBody.year + "-" + requestBody.month;
 
     const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
     const documentItemDailyStock = db.doc(`/products/${request.params.productID}/items_daily_stock/${dailyStockID}`);
     const documentItemMonthlyStock = db.doc(`/products/${request.params.productID}/items_monthly_stock/${monthlyStockID}`);
-
+    let currentDataItem;
     await documentItem
     .get()
     .then((doc)=>{
         if (!doc.exists) {
             return response.status(404).json({ error: 'Barang tidak ditemukan' })
         }else{
-            const data= doc.data();
+            const data = doc.data();
+            currentDataItem = data;
             currentStock.itemTotal = data.stock;
+            isPosted = doc.data().isPosted || false;
         }
     })
     
@@ -760,7 +764,7 @@ exports.updateStock = async (request, response) => {
 
         let updateHistoryItem = {
             description: requestBody.description,
-            type: requestBody.type || 'stock update',
+            type: requestBody.type || 'stock_update',
             createdAt: dateNow,
             updatedAt: dateNow,
             data: {
@@ -772,6 +776,7 @@ exports.updateStock = async (request, response) => {
                 year: year,
                 in: requestStockIn,
                 out: requestStockOut,
+                item: currentDataItem
             }
             
         }
@@ -810,16 +815,18 @@ exports.updateStock = async (request, response) => {
             });
         });
         
-        await db.collection('items_posted').doc(request.params.itemID).update(updateItem)
-        .then(()=> {
-            return;
-        })
-        .catch((err) => {
-            console.error(err);
-            return response.status(500).json({ 
+        if(isPosted){
+            await db.collection('items_posted').doc(request.params.itemID).update(updateItem)
+            .then(()=> {
+                return;
+            })
+            .catch((err) => {
+                console.error(err);
+                return response.status(500).json({ 
                     error: err.code 
+                });
             });
-        });
+        }
         
         await documentItem.update(updateItem)
         .then(()=> {
@@ -976,3 +983,75 @@ exports.updateMonthlyStock = async (request, response) => {
         
 };
 
+
+
+exports.getItemsHistory = async (request, response) => {
+    const productID = request.params.productID;
+    const queryRequest = request.query;
+    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 10;
+    const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
+    
+    //query get all data for counting total data
+    let queryGetAll = db.collection('items_history')
+    .where('data.productID','==',productID)
+    .orderBy('createdAt',order)
+
+    let queryGetData = db.collection('items_history')
+    .where('data.productID','==',productID)
+    .orderBy('createdAt',order)
+    .limit(limit);
+
+    const snapshot = await queryGetAll.get();
+    const total = snapshot.docs.length;
+    const first_page = 1;
+    const last_page = Math.ceil(total/limit);
+    const current_page = queryRequest.page ? queryRequest.page : 1;
+
+    let first_index = total > 0 ? 1 : 0 ;
+    let last_index = total > limit ? limit : total;
+
+    if(current_page>1){
+        const first = db.collection('items_history')
+        .where('data.productID','==',productID)
+        .orderBy('createdAt',order)
+        .limit((limit*current_page)-limit);
+        const snapshotFirst = await first.get();
+        const last = snapshotFirst.docs[snapshotFirst.docs.length - 1];
+        
+        queryGetData = db.collection('items_history')
+        .where('data.productID','==',productID)
+        .orderBy('createdAt',order)
+        .startAfter(last.data().createdAt)
+        .limit(limit)
+
+        const snapshot = await queryGetData.get();
+        first_index = ((limit*current_page)-(limit-1));
+        last_index = first_index + snapshot.docs.length-1;
+    }
+
+    queryGetData.get()
+    .then((docs)=>{
+        let userOrders={
+            data:[],
+            meta: {
+                first_index: first_index,
+                last_index: last_index,
+                current_page: parseInt(current_page),
+                first_page: first_page,
+                last_page: last_page,
+                total: total,
+            }
+        };
+        docs.forEach(doc=>{
+            userOrders.data.push({
+                id:doc.id,
+                ...doc.data(),
+            })
+        })
+        return response.json(userOrders);
+    })
+    .catch((err) => {
+        console.error(err);
+        return response.status(500).json({ error: err});
+    });
+}

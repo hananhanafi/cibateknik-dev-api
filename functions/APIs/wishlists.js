@@ -84,7 +84,7 @@ exports.getUserWishlistWithItem = async (request, response) => {
 
     
     const queryRequest = request.query;
-    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 2;
+    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 12;
 
     //query get all data for counting total data
     let queryGetAll = db.collection('items_posted')

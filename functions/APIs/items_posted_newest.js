@@ -56,7 +56,7 @@ exports.getAllNewestItemsPosted = async (request, response) => {
     const queryRequest = request.query;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
-    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 2;
+    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 12;
 
     //query get all data for counting total data
     let queryGetAll = db.collection('items_posted').orderBy('createdAt', order)

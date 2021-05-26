@@ -30,7 +30,6 @@ exports.validateSignUpData = (data) => {
 
 	if (isEmpty(data.name)) errors.name = 'Must not be empty';
 	if (isEmpty(data.phoneNumber)) errors.phoneNumber = 'Must not be empty';
-	if (isEmpty(data.address)) errors.address = 'Must not be empty';
 
 	if (isEmpty(data.password)) errors.password = 'Must not be empty';
 	if (data.password !== data.confirmPassword) errors.confirmPassword = 'Passowrds must be the same';

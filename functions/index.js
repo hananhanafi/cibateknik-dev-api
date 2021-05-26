@@ -97,8 +97,9 @@ app.put('/category/:categoryID',auth_admin, editCategory);
 //end admin categories
 
 //admin items
-const { postOneItem, getAllItemsByProduct, getOneItem, deleteItem, editItem, updateMonthlyStock, updateStock, uploadImage, deleteItemImage, getAllDataItems } = require('./APIs/items');
+const { postOneItem, getAllItemsByProduct, getOneItem, deleteItem, editItem, updateMonthlyStock, updateStock, uploadImage, deleteItemImage, getAllDataItems, getItemsHistory } = require('./APIs/items');
 app.get('/product/:productID/items', getAllItemsByProduct);
+app.get('/product/:productID/history', getItemsHistory);
 app.get('/product/:productID/data/items', getAllDataItems);
 app.get('/product/:productID/item/:itemID', getOneItem);
 
@@ -111,13 +112,15 @@ app.delete('/product/:productID/item/:itemID', auth_admin, deleteItem);
 app.post('/product/:productID/item/:itemID/stock/monthly', auth_admin, updateMonthlyStock);
 app.post('/product/:productID/item/:itemID/stock/update', updateStock);
 
-const { getAllItemsPosted, getAllItemsPostedByProduct, getOneItemPosted, addPostedItem, deletePostedItem, updatePostedItem} = require('./APIs/items_posted');
+const { getAllItemsPosted, getAllItemsPostedByProduct, getOneItemPosted, addPostedItem, deletePostedItem, updatePostedItem, getDataTopSellingItem} = require('./APIs/items_posted');
 app.post('/product/:productID/item/:itemID/post',auth_admin, addPostedItem);
 app.get('/items-posted', getAllItemsPosted);
 app.get('/items-posted/:productID', getAllItemsPostedByProduct);
 app.get('/item/posted/:itemID', getOneItemPosted);
 app.post('/item/posted/:itemID/update', auth_admin, updatePostedItem);
 app.post('/item/posted/delete',auth_admin, deletePostedItem);
+
+app.get('/item/posted/data/top-selling-item', getDataTopSellingItem);
 
 
 const { addCatalogNewestItem, getAllNewestItemsPosted, getAllNewestItemsPostedByProduct, deleteCatalogNewestItem, } = require('./APIs/items_posted_newest');
@@ -158,13 +161,15 @@ app.get('/rajaongkir/data/city-and-province', getDataCityPronvice);
 app.get('/rajaongkir/cost', getShipmentCost);
 
 
-const { createInvoice, updateInvoice, getUserOrder, getAllUsersOrder, updateStatusOrder } = require('./APIs/xendit');
+const { createInvoice, updateInvoice, getUserOrder, getAllUsersOrder, updateStatusOrder, doneOrder } = require('./APIs/xendit');
 app.post('/user/checkout/invoice/create/:userID', auth, createInvoice);
 app.post('/user/checkout/invoice/update', updateInvoice);
 app.get('/user/order/:userID', auth, getUserOrder);
 app.get('/admin/users-order', auth_admin, getAllUsersOrder);
 app.get('/admin/user-order/:userID', auth_admin, getUserOrder);
 app.post('/admin/users-order/status/update/:orderID', auth_admin, updateStatusOrder);
+
+app.post('/user/order/status/done/:orderID', auth, doneOrder);
 
 // app.post('/item/sold',auth_admin, updateSoldItem);
 // app.delete('/item/sold/delete',auth_admin, deleteSoldItem);

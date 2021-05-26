@@ -15,7 +15,7 @@ exports.loginAdmin = (request, response) => {
         .auth()
         .signInWithEmailAndPassword(user.email, user.password)
         .then(async(data) => {
-            return data.user.getIdToken();
+            return data.user.getIdTokenResult(true);
         })
         .then((token) => {
             return response.json({ token });

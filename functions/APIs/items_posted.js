@@ -4,7 +4,7 @@ exports.getAllItemsPosted = async (request, response) => {
     const queryRequest = request.query;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
-    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 2;
+    const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 12;
     const orderBy = queryRequest.isOrderByPrice == 1 ? 'price' : 'createdAt';
 
     //query get all data for counting total data
@@ -347,6 +347,30 @@ exports.deletePostedItem = async (request, response) => {
         return response.status(200).json({"message":"Berhasil menghapus item"});
 
     } 
+    catch (error) {
+        console.error(error);
+        return response.status(500).json({ error: error });
+    }
+};
+
+
+exports.getDataTopSellingItem = async (request, response) => {
+
+    try{
+        const data = [];
+
+        const snapshotTopSellingItem = await db.collection('items_posted').orderBy('itemSold','desc').limit(10).get();
+        snapshotTopSellingItem.docs.forEach((doc)=>{
+            if(doc.data().itemSold){
+                data.push({
+                    id:doc.id,
+                    ...doc.data(),
+                })
+            }
+        })
+
+        return response.json(data);
+    }
     catch (error) {
         console.error(error);
         return response.status(500).json({ error: error });

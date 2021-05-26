@@ -91,7 +91,6 @@ exports.getAllUsers = async (request, response) => {
                 userID: doc.id,
                 name: doc.data().name,
                 email: doc.data().email,
-                address: doc.data().address,
                 phoneNumber: doc.data().phoneNumber,
                 dateOfBirth: doc.data().dateOfBirth,
                 photoURL: doc.data().photoURL,
@@ -120,6 +119,8 @@ exports.getToken = (request, response) => {
             console.error(error);
             return response.status(403).json({ error:error,message: 'wrong credentials, please try again'});
         })
+    }else {
+        return response.status(403).json({ message: 'wrong credentials, please try again'});
     }
 }
 
@@ -213,7 +214,6 @@ exports.signUpUser = async (request, response) => {
         name: request.body.name,
         email: request.body.email,
         phoneNumber: request.body.phoneNumber,
-        address: request.body.address,
 		password: request.body.password,
 		confirmPassword: request.body.confirmPassword,
         createdAt: new Date(),
@@ -244,7 +244,6 @@ exports.signUpUser = async (request, response) => {
         const userCredentials = {
             name: newUser.name,
             phoneNumber: newUser.phoneNumber,
-            address: newUser.address,
             email: newUser.email,
             createdAt: newUser.createdAt,
             updatedAt: newUser.updatedAt,
@@ -286,7 +285,6 @@ exports.googleSignIn = async (request, response) => {
         email: request.body.email,
         phoneNumber: request.body.phoneNumber,
         photoURL: request.body.photoURL,
-        address: '',
         createdAt: dateNow,
         updatedAt: dateNow,
     };
