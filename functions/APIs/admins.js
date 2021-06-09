@@ -1,7 +1,7 @@
 const { db, firebase } = require('../util/admin');
 const { validateLoginData, validateSignUpAdmin } = require('../util/validators');
 
-// Login
+// Login admin
 exports.loginAdmin = (request, response) => {
     const user = {
         email: request.body.email,

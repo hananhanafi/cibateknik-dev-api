@@ -16,18 +16,17 @@ exports.createUserAddress = async (request, response) => {
             createdAt: date,
             updatedAt: date,
         }
-        
-        const collectionUserAddress = db.collection('users').doc(userID).collection('addresses')
-
         const { valid, errors } = validateEmptyData(newAddress);
         if (!valid) return response.status(400).json(errors);
 
+        const collectionUserAddress = db.collection('users').doc(userID).collection('addresses')
         const snapsotCollectionUserAddress = await collectionUserAddress.get();
         const userAddresses = snapsotCollectionUserAddress.docs.length;
 
         if(userAddresses<1){
             newAddress.isMainAddress = true;
         }
+        
         await collectionUserAddress.add(newAddress)
         .then((doc)=>{
             const responseAddress = newAddress;
@@ -44,8 +43,6 @@ exports.createUserAddress = async (request, response) => {
         console.error(error);
         return response.status(500).json({ error: error });
     }
-
-    // return response.status(200).json({"message":"Berhasil menambahkan alamat"});
 };
 
 exports.deleteUserAddress = async (request, response) => {
@@ -67,7 +64,6 @@ exports.deleteUserAddress = async (request, response) => {
             return response.status(500).json({ error: err.code });
         });
 };
-
 
 exports.getUserAddresses = async (request, response) => {
     const userID = request.query.userID || request.user.uid;
@@ -97,10 +93,7 @@ exports.getUserAddresses = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-
 }
-
-
 
 exports.editUserAddress = async (request, response) => {
     const userID = request.query.userID || request.user.uid;
@@ -110,7 +103,8 @@ exports.editUserAddress = async (request, response) => {
     
     updateAddress.updatedAt = new Date();
     
-    let document = db.collection('users').doc(userID).collection('addresses').doc(`${request.params.addressID}`);
+    let document = db.collection('users').doc(userID).collection('addresses')
+    .doc(`${request.params.addressID}`);
     document.get()
     .then(async (doc)=>{
         if (!doc.exists) {
@@ -120,7 +114,6 @@ exports.editUserAddress = async (request, response) => {
     .catch((err) => {
         return response.status(404).json({ message: 'Alamat tidak ditemukan' })
     });
-
 
     document.update(updateAddress)
     .then(()=> {
@@ -140,7 +133,6 @@ exports.updateMainAddress = async (request, response) => {
     const addressID = request.params.addressID;
     
     const collectionUserAddress = db.collection('users').doc(userID).collection('addresses').where('isMainAddress','==',true)
-    
     const snapsotCollectionUserAddress = await collectionUserAddress.get();
     const userMainAddress = snapsotCollectionUserAddress.docs.length;
     if(userMainAddress>0){
@@ -157,9 +149,7 @@ exports.updateMainAddress = async (request, response) => {
     }
     
     let document = db.collection('users').doc(userID).collection('addresses').doc(`${addressID}`);
-    
     const newAddress = {isMainAddress:true};
-    
     document.update(newAddress)
     .then(()=> {
         newAddress.addressID = addressID;

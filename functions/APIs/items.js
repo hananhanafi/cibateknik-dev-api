@@ -185,7 +185,6 @@ exports.getOneItem = async (request, response) => {
 };
 
 exports.postOneItem = async (request, response) => {
-
     try {
         const date = new Date();
         
@@ -418,9 +417,13 @@ exports.deleteItemImage = async (request, response) => {
 };
 
 exports.editItem = async ( request, response ) => { 
-    let updateItem = Object.fromEntries(
-        Object.entries(request.body).filter(([key, value]) => value != null) );
-    
+    if (request.body.name == undefined || request.body.name.trim() === '') {
+        return response.status(400).json({ name: 'Must not be empty' });
+    }
+    if(!request.params.itemID){
+        response.status(403).json({message: 'Not allowed to edit'});
+    }
+    let updateItem = Object.fromEntries(Object.entries(request.body).filter(([key, value]) => value != null) );
     if(updateItem.price){
         updateItem.price = parseInt(updateItem.price);
     }
@@ -428,29 +431,15 @@ exports.editItem = async ( request, response ) => {
         updateItem.stock = parseInt(updateItem.stock);
     }
     updateItem.updatedAt = new Date();
-
-    if (request.body.name == undefined || request.body.name.trim() === '') {
-        return response.status(400).json({ name: 'Must not be empty' });
-    }
-    if(!request.params.itemID){
-        response.status(403).json({message: 'Not allowed to edit'});
-    }
-
-    
-    
     const res = updateItem.name.toLowerCase().split(" ");
     const nameArr = res.filter(item=>{
         return item!="";
     });
     const itemUID = nameArr.join("-");
     updateItem.itemUID = itemUID; 
-
-
-    let document = db.collection('products').doc(`${request.params.productID}`).collection('items').doc(`${request.params.itemID}`);
-
     let isEmpty = false;
     let isPosted = false;
-
+    let document = db.collection('products').doc(`${request.params.productID}`).collection('items').doc(`${request.params.itemID}`);
     await document.get()
     .then(async (doc)=>{
         if (!doc.exists) {
@@ -458,7 +447,6 @@ exports.editItem = async ( request, response ) => {
         }else {
             isPosted = doc.data().isPosted || false;
         }
-        
         if(doc.data().name!=updateItem.name){
             try{
                 const productsRef = db.collection('products')
@@ -480,15 +468,12 @@ exports.editItem = async ( request, response ) => {
             }
 
         }
-
     })
     .catch((err) => {
         return response.status(500).json({ error: err })
     });
-
     const searchKeywordsArray = await createSubstringArray(updateItem.name);
     updateItem.searchKeywordsArray = searchKeywordsArray;
-
     if(isPosted){
         db.collection('items_posted').doc(request.params.itemID).update(updateItem)
         .then(()=> {
@@ -500,9 +485,7 @@ exports.editItem = async ( request, response ) => {
                     error: err.code 
             });
         });
-
     }
-
     if(!isEmpty){
         document.update(updateItem)
         .then(()=> {
@@ -548,60 +531,56 @@ exports.deleteItem = async (request, response) => {
     }catch (err) {
         return response.status(404).json({ error: err });
     }
-    
-        const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
-        await documentItem
-            .get()
-            .then(async (doc) => {
-                if (!doc.exists) {
-                    return response.status(404).json({ error: 'Barang tidak ditemukans' })
-                }else{
-                    if(doc.data().isPosted){
-                        try {
-                            const itemPosted = await db.collection('items_posted').doc(request.params.itemID);
-                            itemPosted.delete();
-                        }catch (err) {
-                            return response.status(404).json({ error: err });
-                        }
-                    }
-                }
-
-                if(doc.data().imagesItem){
-                    const deleted_images = doc.data().imagesItem;
-                
-                    const promises = [];
-                
-                    deleted_images.forEach(function(image){
-                        promises.push(
-                            deleteImage(image.imageName)
-                        )
-                    });
+    const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
+    await documentItem
+        .get()
+        .then(async (doc) => {
+            if (!doc.exists) {
+                return response.status(404).json({ error: 'Barang tidak ditemukans' })
+            }else{
+                if(doc.data().isPosted){
                     try {
-                        await Promise.all(promises);
-
-                        return documentItem.delete();
+                        const itemPosted = await db.collection('items_posted').doc(request.params.itemID);
+                        itemPosted.delete();
                     }catch (err) {
                         return response.status(404).json({ error: err });
                     }
+                }
+            }
 
-                }else {
+            if(doc.data().imagesItem){
+                const deleted_images = doc.data().imagesItem;
+                const promises = [];
+                deleted_images.forEach(function(image){
+                    promises.push(
+                        deleteImage(image.imageName)
+                    )
+                });
+                try {
+                    await Promise.all(promises);
+
                     return documentItem.delete();
+                }catch (err) {
+                    return response.status(404).json({ error: err });
                 }
 
-            })
-            .then(() => {
-                response.json({ message: 'Delete successfull' });
-            })
-            .catch((err) => {
-                console.error(err);
-                return response.status(500).json({ error: err.code,message: 'Server error' });
-            });
+            }else {
+                return documentItem.delete();
+            }
+
+        })
+        .then(() => {
+            response.json({ message: 'Delete successfull' });
+        })
+        .catch((err) => {
+            console.error(err);
+            return response.status(500).json({ error: err.code,message: 'Server error' });
+        });
 };
 
 exports.updateStock = async (request, response) => {
     const dateNow = new Date();
     const requestBody = request.body;
-
     if (requestBody.date == undefined || requestBody.date === '') {
         return response.status(400).json({ date: 'Must not be empty' });
     }
@@ -611,15 +590,12 @@ exports.updateStock = async (request, response) => {
     if (requestBody.year == undefined || requestBody.year === '') {
         return response.status(400).json({ year: 'Must not be empty' });
     }
-    
     const date = parseInt(requestBody.date);
     const month = parseInt(requestBody.month);
     const year = parseInt(requestBody.year);
     const requestStockIn = parseInt(requestBody.in);
     const requestStockOut = parseInt(requestBody.out);
     const requestTotalStock = parseInt(requestStockIn) - parseInt(requestStockOut);
-
-    
     let currentStock = {
         itemTotal: 0,
         monthlyIn: 0,
@@ -629,12 +605,9 @@ exports.updateStock = async (request, response) => {
         dailyOut: 0,
         dailyTotal: 0
     }
-
     let isPosted = false;
-
     const dailyStockID = request.params.itemID + "-" + requestBody.year + "-" + requestBody.month + "-" + requestBody.date;
     const monthlyStockID = request.params.itemID + "-" + requestBody.year + "-" + requestBody.month;
-
     const documentItem = db.doc(`/products/${request.params.productID}/items/${request.params.itemID}`);
     const documentItemDailyStock = db.doc(`/products/${request.params.productID}/items_daily_stock/${dailyStockID}`);
     const documentItemMonthlyStock = db.doc(`/products/${request.params.productID}/items_monthly_stock/${monthlyStockID}`);
@@ -651,7 +624,6 @@ exports.updateStock = async (request, response) => {
             isPosted = doc.data().isPosted || false;
         }
     })
-    
     await documentItemDailyStock
     .get()
     .then(async(doc) => {
@@ -696,7 +668,6 @@ exports.updateStock = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err.code });
     });
-
     await documentItemMonthlyStock
         .get()
         .then(async(doc) => {

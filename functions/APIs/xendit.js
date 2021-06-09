@@ -11,6 +11,8 @@ exports.createInvoice = async (request, response) => {
         const shipment = requestBody.shipment;
         const courier = requestBody.courier;
         const amount = parseInt(requestBody.amount);
+        const payer_email = requestBody.payer_email || request.user.email;
+        let responseOrder;
 
         const detailOrder = {
             items: requestBody.items,
@@ -18,7 +20,6 @@ exports.createInvoice = async (request, response) => {
             totalItemsWeight: requestBody.totalItemsWeight, 
             totalItemsPrice: requestBody.totalItemsPrice,
         }
-
         const newOrder = {
             userID,
             detailOrder,
@@ -30,13 +31,11 @@ exports.createInvoice = async (request, response) => {
             updateAt: dateNow,
         }
         newOrder.shipment.courier = courier || '';
-
-        const collectionUsersOrder = db.collection('users_order');
-        let responseOrder;
         
         const { valid, errors } = validateEmptyData(newOrder);
         if (!valid) return response.status(400).json(errors);
-
+        
+        const collectionUsersOrder = db.collection('users_order');
         await collectionUsersOrder.add(newOrder)
         .then((doc)=>{
             responseOrder = newOrder;
@@ -47,15 +46,10 @@ exports.createInvoice = async (request, response) => {
             console.error(err);
         });
 
-        
-        const payer_email = requestBody.payer_email || request.user.email;
-
         const Xendit = require('xendit-node');
         const x = new Xendit({
             secretKey: 'xnd_development_3hOf2OVfDtLYAbNiAiY3j9ubonAwpn2LOR9een880EAxJbBPTE4kfjtoQo18O5',
         });
-        
-
         const { Invoice } = x;
         const invoiceSpecificOptions = {};
         const i = new Invoice(invoiceSpecificOptions);
@@ -69,7 +63,6 @@ exports.createInvoice = async (request, response) => {
 
         const documentUserOrder = collectionUsersOrder.doc(responseOrder.id);
         if(resp){
-
             newOrder.invoice = resp;
             const itemOrderInCart = newOrder.detailOrder.items.map(item=>{return item.cart});
             const documentUserCart = db.collection('users_cart').doc(userID)
@@ -103,7 +96,7 @@ exports.createInvoice = async (request, response) => {
                     createdAt: dateNow,
                     updatedAt: dateNow,
                     notification_type: 'user_order',
-                    title: "Pemesanan Barang",
+                    title: "Pemesanan Barang Atas Nama " + newOrder.address.name,
                     description: `Customer atas nama ${newOrder.address.name} telah memesan barang dengan jumlah tagihan sebesar Rp ${toFormatedNumber(amount)}. Untuk mengetahui rincian pesanan customer dapat dilihat pada Dashboard > Daftar Pesanan.`,
                     data: newOrder,
                     isRead: false,
@@ -115,7 +108,6 @@ exports.createInvoice = async (request, response) => {
                 const promises = [];
                 const orderedItems = newOrder.detailOrder.items;
                 orderedItems.forEach(item=>{
-                    console.log("ORDERING",item);
                     promises.push(
                         new Promise((resolve, reject) => {
                             var request = require("request");
@@ -164,15 +156,11 @@ exports.createInvoice = async (request, response) => {
             documentUserOrder.delete();
             response.status(500).json({ message: 'Checkout error' });
         }
-        
-            
     } catch (error) {
         console.error(error);
         return response.status(500).json({ error: error,message: 'Something went wrong' });
     }
-
 }
-
 
 exports.getUserOrder = async (request, response) => {
     const userID = request.params.userID || request.user.uid;
@@ -246,8 +234,6 @@ exports.getUserOrder = async (request, response) => {
     });
 }
 
-
-
 exports.updateInvoice = async (request, response) => {
     try {
         const invoice_id = request.body.id;
@@ -286,7 +272,7 @@ exports.updateInvoice = async (request, response) => {
             
             try {
                 orderItems.forEach(item=>{
-                    db.collection('items_posted').doc(`${item.cart.itemID}`).get()
+                    db.collection('products').doc(`${item.item.productID}`).collection('items').doc(`${item.item.itemID}`).get()
                     .then((doc)=>{
                         let currentItemSold;
                         if(doc.data().itemSold){
@@ -295,6 +281,7 @@ exports.updateInvoice = async (request, response) => {
                             currentItemSold = parseInt(item.cart.amount);
                         }
                         db.collection('items_posted').doc(`${item.cart.itemID}`).update({itemSold:currentItemSold});
+                        db.collection('products').doc(`${item.item.productID}`).collection('items').doc(`${item.item.itemID}`).update({itemSold:currentItemSold});
                     });
                 })
 
@@ -321,7 +308,7 @@ exports.updateInvoice = async (request, response) => {
                     createdAt: dateNow,
                     updatedAt: dateNow,
                     notification_type: 'user_order',
-                    title: "Pesanan Dibayar",
+                    title: `Pesanan Atas Nama ${dataOrder.address.name} Telah Dibayar`,
                     description: `Customer atas nama ${dataOrder.address.name} telah membayar pesanan dengan tagihan sebesar ${toFormatedNumber(dataOrder.amount)}, segera lakukan pengemasan dan pengiriman sesuai dengan alamant yang tertera di rincian pesanan. Untuk mengetahui rincian pesanan customer dapat dilihat pada Dashboard > Daftar Pesanan.`,
                     data: dataOrder,
                     isRead: false,
@@ -343,7 +330,6 @@ exports.updateInvoice = async (request, response) => {
                 return response.status(500).json({ error: error });
             }
         }else {
-
             const promises = [];
             orderItems.forEach(item=>{
                 promises.push(
@@ -404,27 +390,19 @@ exports.updateInvoice = async (request, response) => {
                 return response.status(500).json({ error: error });
             }
         }
-
-            
     } catch (error) {
         console.error(error);
         return response.status(500).json({ error: error,message: 'Something went wrong' });
     }
-
 }
-
-
-
 
 exports.getAllUsersOrder = async (request, response) => {
     const queryRequest = request.query;
     const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 10;
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
-    
     //query get all data for counting total data
     let queryGetAll = db.collection('users_order')
     .orderBy('createdAt',order)
-
     let queryGetData = db.collection('users_order')
     .orderBy('createdAt',order)
     .limit(limit);
@@ -434,10 +412,8 @@ exports.getAllUsersOrder = async (request, response) => {
     const first_page = 1;
     const last_page = Math.ceil(total/limit);
     const current_page = queryRequest.page ? queryRequest.page : 1;
-
     let first_index = total > 0 ? 1 : 0 ;
     let last_index = total > limit ? limit : total;
-
     if(current_page>1){
         const first = db.collection('users_order')
         .orderBy('createdAt',order)
@@ -455,7 +431,6 @@ exports.getAllUsersOrder = async (request, response) => {
         last_index = first_index + snapshot.docs.length-1;
     }
 
-    
     let userOrders={
         data:[],
         meta: {
@@ -477,21 +452,16 @@ exports.getAllUsersOrder = async (request, response) => {
 
     const snapshotPending = await db.collection('users_order').where('statusOrder','==','PENDING').get();
     userOrders.total.pending = snapshotPending.docs.length;
-
     const snapshotPacking = await db.collection('users_order').where('statusOrder','==','PACKING').get();
     userOrders.total.packing = snapshotPacking.docs.length;
-    
     const snapshotShipping = await db.collection('users_order').where('statusOrder','==','SHIPPING').get();
     userOrders.total.shipping = snapshotShipping.docs.length;
-
     const snapshotDone = await db.collection('users_order').where('statusOrder','==','DONE').get()
     userOrders.total.done = snapshotDone.docs.length;
-
     const snapshotExpired = await db.collection('users_order').where('statusOrder','==','EXPIRED').get();
     userOrders.total.expired = snapshotExpired.docs.length;
     queryGetData.get()
     .then((docs)=>{
-        console.log("AD");
         docs.forEach(doc=>{
             userOrders.data.push({
                 id:doc.id,
@@ -566,7 +536,6 @@ exports.updateStatusOrder = async (request, response) => {
                 }
                 
             }
-            console.log("NEWNOTIF",newNotif);
             await db.collection('users').doc(userID).collection('notifications').add(newNotif)
         });
 
@@ -576,7 +545,6 @@ exports.updateStatusOrder = async (request, response) => {
         console.error(error);
         return response.status(500).json({ error: error,message: 'Something went wrong' });
     }
-
 }
 
 
@@ -607,7 +575,7 @@ exports.doneOrder = async (request, response) => {
                     createdAt: dateNow,
                     updatedAt: dateNow,
                     notification_type: 'order',
-                    title: "Pesanan Selesai",
+                    title: `Pesanan Atas Nama ${dataOrder.address.name} Telah Selesai`,
                     description: `Pesanan telah diterima oleh customer.`,
                     data: dataOrder,
                     isRead: false,

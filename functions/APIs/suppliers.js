@@ -162,7 +162,6 @@ exports.getOneSupplier = (request, response) => {
             if (!doc.exists) {
                 return response.status(404).json({ error: 'Supplier not found' })
             }
-
             
 			if (doc.exists) {
                 supplierData = doc.data();
@@ -195,15 +194,16 @@ exports.deleteSupplier = (request, response) => {
 };
 
 exports.editSupplier = async ( request, response ) => { 
+    
+    if(!request.params.supplierID){
+        response.status(403).json({message: 'Not allowed to edit'});
+    }
 
     let updateSupplier = Object.fromEntries(
         Object.entries(request.body).filter(([key, value]) => value != null) );
     
     updateSupplier.updatedAt = new Date();
     
-    if(!request.params.supplierID){
-        response.status(403).json({message: 'Not allowed to edit'});
-    }
     let document = db.collection('suppliers').doc(`${request.params.supplierID}`);
 
     document.get()
@@ -224,7 +224,6 @@ exports.editSupplier = async ( request, response ) => {
     .catch((err) => {
         return response.status(404).json({ error: 'Supplier not found' })
     });
-
     
     const res = request.body.name.toLowerCase().split(" ");
     const nameArr = res.filter(item=>{

@@ -1,6 +1,6 @@
 const { db, fieldValue } = require('../util/admin');
 
-exports.addItemToCart = async (request, response) => {
+exports.updateItemCart = async (request, response) => {
     try {
         // const listItemID = request.body.items_id;
         const userID = request.body.userID;
@@ -11,8 +11,8 @@ exports.addItemToCart = async (request, response) => {
             amount : amount,
         }
         let itemList = {itemList: [newItemCart]}
-        const documentUserCart = db.collection('users_cart').doc(userID)
 
+        const documentUserCart = db.collection('users_cart').doc(userID)
         documentUserCart.get()
         .then((doc)=>{
             if (!doc.exists) {
@@ -21,7 +21,6 @@ exports.addItemToCart = async (request, response) => {
                 itemList = [];
                 itemList.push(newItemCart);
                 
-
                 const existItemList = doc.data().itemList;
                 const isItemExistInCart = existItemList.find(item=>{return item.itemID == itemID});
                 
@@ -40,7 +39,6 @@ exports.addItemToCart = async (request, response) => {
         console.error(error);
         return response.status(500).json({ error: error });
     }
-
     return response.status(200).json({"message":"Berhasil menambahkan barang ke dalam keranjang"});
 };
 
@@ -60,8 +58,6 @@ exports.getUserCart = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-
-
 }
 
 

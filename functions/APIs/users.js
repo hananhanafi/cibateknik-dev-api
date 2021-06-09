@@ -140,13 +140,6 @@ exports.loginUser = (request, response) => {
         .signInWithEmailAndPassword(user.email, user.password)
         .then(async(data) => {
             
-            // const isVerified = await firebase.auth().currentUser.emailVerified;
-
-            // if(!isVerified){
-            //     return response.status(403).json({ message: 'Please verify your account'});
-            // }
-
-            
             db.collection('users').doc(`${data.user.uid}`).update({lastLogin:new Date(),isLogin:true});
             // return data.user.getIdToken(true);
             return data.user.getIdTokenResult(true);
@@ -227,7 +220,6 @@ exports.signUpUser = async (request, response) => {
     const searchKeywordsArray = await createSubstringArray(newUser.name);
     newUser.searchKeywordsArray = searchKeywordsArray;
 
-
     let token, userID;
 
     firebase
@@ -289,16 +281,11 @@ exports.googleSignIn = async (request, response) => {
         updatedAt: dateNow,
     };
 
-    // const { valid, errors } = validateSignUpData(newUser);
-
-	// if (!valid) return response.status(400).json(errors);
-
     const searchKeywordsArray = await createSubstringArray(newUser.name);
     newUser.searchKeywordsArray = searchKeywordsArray;
 
-    newUser.searchKeywordsArray = searchKeywordsArray;
-
-	await db
+    try{
+        await db
 		.doc(`/users/${newUser.userID}`)
 		.get()
 		.then((doc) => {
@@ -317,9 +304,7 @@ exports.googleSignIn = async (request, response) => {
 			return response.status(500).json({ error: error.code });
 		});
 
-    try{
         return response.status(200).json({message: 'Berhasil masuk dengan google' });
-    
     }catch (error){
         return response.status(500).json({ general: 'Something went wrong, please try again' });
     }
@@ -396,31 +381,18 @@ exports.uploadProfilePhoto = async (request, response) => {
 
 exports.getUserDetail = async (request, response) => {
     let userData = {};
-
-    // return response.json(firebase.auth().currentUser.emailVerified);
-
-    let isVerified = false;
-
-    // try {
-    //     isVerified = await firebase.auth().currentUser.emailVerified;
-    // }catch (error){
-    //     return response.status(500).json({ message: 'Something went wrong, please try again' });
-    // }
-
-	db
-		.doc(`/users/${request.user.uid}`)
-		.get()
-		.then((doc) => {
-			if (doc.exists) {
-                userData.userCredentials = doc.data();
-                userData.isVerified = isVerified;
-                return response.json(userData);
-			}	
-		})
-		.catch((error) => {
-			console.error(error);
-			return response.status(500).json({ error: error.code });
-		});
+	db.doc(`/users/${request.user.uid}`)
+    .get()
+    .then((doc) => {
+        if (doc.exists) {
+            userData.userCredentials = doc.data();
+            return response.json(userData);
+        }	
+    })
+    .catch((error) => {
+        console.error(error);
+        return response.status(500).json({ error: error.code });
+    });
 }
 
 exports.adminGetUserDetail = async (request, response) => {
@@ -443,41 +415,15 @@ exports.adminGetUserDetail = async (request, response) => {
 }
 
 exports.updateUserDetails = async (request, response) => {
-
-    
     let updateItem = Object.fromEntries(
         Object.entries(request.body).filter(([key, value]) => value != null) );
-    
     updateItem.updatedAt = new Date();
-    
-    let document = db.collection('users').doc(`${request.user.uid}`);
-
-    var user = firebase.auth().currentUser;
-
-        
     const searchKeywordsArray = await createSubstringArray(updateItem.name);
     updateItem.searchKeywordsArray = searchKeywordsArray;
-
-    if(updateItem.email){
-        user.updateEmail(updateItem.email).then(function() {
-        // Update successful.
-        }).catch(function(error) {
-        // An error happened.
-        });
-            
-    }
-    if(updateItem.passsword){
-        user.updatePassword(updateItem.email).then(function() {
-        // Update successful.
-        }).catch(function(error) {
-        // An error happened.
-        });
-            
-    }
-
+    
+    let document = db.collection('users').doc(`${request.user.uid}`);
     document.update(updateItem)
     .then((data)=> {
-        // response.json({message: 'Updated successfully'});
         return document.get();
     })
     .then((doc) => {

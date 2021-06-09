@@ -57,10 +57,8 @@ exports.getAllBrands= async (request, response) => {
     const last_page = Math.ceil(total/limit);
     const current_page = queryRequest.page ? queryRequest.page : 1;
 
-
     let first_index = total > 0 ? 1 : 0 ;
     let last_index = total > limit ? limit : total;
-
     
     if(current_page>1){
         if(search){
@@ -145,7 +143,6 @@ exports.postOneBrand = async (request, response) => {
             updatedAt: new Date(),
 
         }
-
         
         const searchKeywordsArray = await createSubstringArray(newBrandItem.name);
         newBrandItem.searchKeywordsArray = searchKeywordsArray;
@@ -178,6 +175,7 @@ exports.postOneBrand = async (request, response) => {
     }
 };
 
+
 exports.getOneBrand = (request, response) => {
     const document = db.doc(`/brands/${request.params.brandID}`);
     document
@@ -186,7 +184,6 @@ exports.getOneBrand = (request, response) => {
             if (!doc.exists) {
                 return response.status(404).json({ message: 'Brand not found' })
             }
-
             
 			if (doc.exists) {
                 brandData = doc.data();
@@ -220,17 +217,17 @@ exports.deleteBrand = (request, response) => {
 
 exports.editBrand = async ( request, response ) => { 
 
-    let updateBrand = Object.fromEntries(
-        Object.entries(request.body).filter(([key, value]) => value != null) );
-    
-    updateBrand.updatedAt = new Date();
-    
     if (request.body.name == undefined || request.body.name.trim() === '') {
         return response.status(400).json({ name: 'Must not be empty' });
     }
     if(!request.params.brandID){
         response.status(403).json({message: 'Not allowed to edit'});
     }
+
+    let updateBrand = Object.fromEntries(
+        Object.entries(request.body).filter(([key, value]) => value != null) );
+    
+    updateBrand.updatedAt = new Date();
     let document = db.collection('brands').doc(`${request.params.brandID}`);
 
     document.get()
@@ -252,7 +249,6 @@ exports.editBrand = async ( request, response ) => {
         return response.status(404).json({ message: 'Brand not found' })
     });
 
-    
     const res = request.body.name.toLowerCase().split(" ");
     const nameArr = res.filter(item=>{
         return item!="";
@@ -264,7 +260,6 @@ exports.editBrand = async ( request, response ) => {
     
     const searchKeywordsArray = await createSubstringArray(updateBrand.name);
     updateBrand.searchKeywordsArray = searchKeywordsArray;
-
 
     document.update(updateBrand)
     .then(()=> {

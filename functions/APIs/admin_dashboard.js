@@ -1,8 +1,6 @@
 const { db } = require('../util/admin');
 exports.getTotalData = async (request, response) => {
-
     try{
-
         const total= {
             order: 0,
             revenue: 0,
@@ -19,10 +17,8 @@ exports.getTotalData = async (request, response) => {
         })
         total.revenue = totalRevenue;
         
-        
         const snapshotUsers = await db.collection('users').get();
         total.users = snapshotUsers.docs.length;
-        
         
         return response.json(total);
     }
@@ -30,8 +26,6 @@ exports.getTotalData = async (request, response) => {
         console.error(error);
         return response.status(500).json({ error: error });
     }
-
-    
 };
 
 
@@ -51,19 +45,17 @@ exports.getTodayData = async (request, response) => {
         const snapshotUsersOnline = await db.collection('users').where('isLogin','==',true).get();
         data.usersOnline = snapshotUsersOnline.docs.length;
         
-
         const snapshotTodayOrder = await db.collection('users_order').orderBy('createdAt','desc').where('createdAt','>',dateYesterday).where('createdAt','<',dateTomorrow).get();
         data.todayOrder = snapshotTodayOrder.docs.length;
         
 
         const snapshotTodayOrderRevenye = await db.collection('users_order').where('isPaid','==',true).where('paidAt','>',dateYesterday).where('paidAt','<',dateTomorrow).get();
-
+        
         let totalToadyRevenue = 0;
         snapshotTodayOrderRevenye.docs.forEach((order)=>{
             totalToadyRevenue = totalToadyRevenue + order.data().amount;
         })
         data.todayRevenue = totalToadyRevenue;
-
         
         return response.json(data);
     }

@@ -3,7 +3,6 @@ const { db } = require('../util/admin');
 
 exports.getUserNotifications = async (request, response) => {
     const userID = request.params.userID || request.user.uid;
-    
     const queryRequest = request.query;
     const limit = queryRequest.limit ? parseInt(queryRequest.limit) : 10;
 
@@ -39,8 +38,6 @@ exports.getUserNotifications = async (request, response) => {
         last_index = first_index + snapshot.docs.length-1;
     }
 
-    
-
     queryGetData.get()
     .then((docs)=>{
         let userNotifications={
@@ -66,7 +63,6 @@ exports.getUserNotifications = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-
 }
 
 exports.getUserUnreadNotifications = async (request, response) => {
@@ -88,7 +84,6 @@ exports.getUserUnreadNotifications = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-
 }
 
 
@@ -109,7 +104,6 @@ exports.userNotificationSetRead = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-
 }
 
 
@@ -142,7 +136,6 @@ exports.userAllNotificationSetRead = async (request, response) => {
         console.error(err);
         return response.status(500).json({ error: err});
     });
-
 }
 
 

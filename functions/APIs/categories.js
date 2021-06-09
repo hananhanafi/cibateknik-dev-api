@@ -122,7 +122,6 @@ exports.postOneCategory = async (request, response) => {
             updatedAt: new Date(),
 
         }
-
         
         const searchKeywordsArray = await createSubstringArray(newCategory.name);
         newCategory.searchKeywordsArray = searchKeywordsArray;
@@ -163,7 +162,6 @@ exports.getOneCategory = (request, response) => {
             if (!doc.exists) {
                 return response.status(404).json({ message: 'Category not found' })
             }
-
             
 			if (doc.exists) {
                 categoryData = doc.data();
@@ -196,11 +194,6 @@ exports.deleteCategory = (request, response) => {
 };
 
 exports.editCategory = async ( request, response ) => { 
-
-    let updateCategory = Object.fromEntries(
-        Object.entries(request.body).filter(([key, value]) => value != null) );
-    
-    updateCategory.updatedAt = new Date();
     
     if (request.body.name == undefined || request.body.name.trim() === '') {
         return response.status(400).json({ name: 'Must not be empty' });
@@ -208,6 +201,11 @@ exports.editCategory = async ( request, response ) => {
     if(!request.params.categoryID){
         response.status(403).json({message: 'Not allowed to edit'});
     }
+
+    let updateCategory = Object.fromEntries(
+        Object.entries(request.body).filter(([key, value]) => value != null) );
+    
+    updateCategory.updatedAt = new Date();
     let document = db.collection('categories').doc(`${request.params.categoryID}`);
 
     document.get()
@@ -228,7 +226,6 @@ exports.editCategory = async ( request, response ) => {
     .catch((err) => {
         return response.status(404).json({ message: 'Category not found' })
     });
-
     
     const res = request.body.name.toLowerCase().split(" ");
     const nameArr = res.filter(item=>{
@@ -241,7 +238,6 @@ exports.editCategory = async ( request, response ) => {
     
     const searchKeywordsArray = await createSubstringArray(updateCategory.name);
     updateCategory.searchKeywordsArray = searchKeywordsArray;
-
 
     document.update(updateCategory)
     .then(()=> {

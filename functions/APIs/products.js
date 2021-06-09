@@ -6,7 +6,6 @@ exports.getAllProducts = async (request, response) => {
     const order = queryRequest.order == 'asc' ? 'asc' : 'desc';
     const search = queryRequest.search;
     const limit = queryRequest.limit ? queryRequest.limit : 10;
-
     let filterCounter = [];
 
     if(queryRequest.category){
@@ -86,17 +85,13 @@ exports.getAllProducts = async (request, response) => {
             }
         }
     }
-
     const snapshot = await queryGetAll.get();
     const total = snapshot.docs.length;
     const first_page = 1;
     const last_page = Math.ceil(total/limit);
     const current_page = queryRequest.page ? queryRequest.page : 1;
-
-
     let first_index = total > 0 ? 1 : 0 ;
     let last_index = total > limit ? limit : total;
-
     
     if(current_page>1){
 
@@ -305,19 +300,18 @@ exports.getAllProducts = async (request, response) => {
     });
 };
 
+
+
 exports.postOneProduct = async (request, response) => {
     try {
         if (request.body.name == undefined || request.body.name.trim() === '') {
             return response.status(400).json({ name: 'Must not be empty' });
         }
-        
         const res = request.body.name.toLowerCase().split(" ");
         const nameArr = res.filter(item=>{
             return item!="";
         })
         const productUID = nameArr.join("-");
-
-
         const newProductItem = {
             productUID: productUID,
             name: request.body.name ? request.body.name : null,
@@ -329,19 +323,14 @@ exports.postOneProduct = async (request, response) => {
             updatedAt: new Date(),
         }
         
-        
         const searchKeywordsArray = await createSubstringArray(newProductItem.name);
         newProductItem.searchKeywordsArray = searchKeywordsArray;
 
-        
         const productsRef = db.collection('products');
         const product = await productsRef.where('name', '==', newProductItem.name).limit(1).get();
-
         if(product.empty){
             db
-            .collection('products')
-            // .doc(productUID)
-            .add(newProductItem)
+            .collection('products').add(newProductItem)
             .then((doc)=>{
                 const responseProductItem = newProductItem;
                 delete responseProductItem.searchKeywordsArray;

@@ -200,7 +200,7 @@ exports.getOneItemPosted = (request, response) => {
     const document = db.doc(`/items_posted/${request.params.itemID}`);
     document
     .get()
-    .then((doc) => {
+    .then(async (doc) => {
         if (!doc.exists) {
             return response.status(404).json({ message: 'Barang tidak ditemukan' })
         }
@@ -208,6 +208,10 @@ exports.getOneItemPosted = (request, response) => {
         if (doc.exists) {
             itemData = doc.data();
             itemData.id = doc.id;
+            await db.collection('products').doc(doc.data().productID).get()
+            .then((doc)=>{
+                itemData.product = doc.data();
+            })
             return response.json(itemData);
         }	
     })
